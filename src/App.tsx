@@ -20,11 +20,16 @@ function App() {
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [domainInput, setDomainInput] = useState('');
+  const [targetApp, setTargetApp] = useState('aichat');
+  const [logoUrl, setLogoUrl] = useState('');
   const [domainStatus, setDomainStatus] = useState('');
   const [domainError, setDomainError] = useState('');
   const [domainLoading, setDomainLoading] = useState(false);
   const [domainList, setDomainList] = useState<string[]>([]);
   const [domainStatuses, setDomainStatuses] = useState<Record<string, { ready: boolean; pending: boolean; error?: string }>>({});
+  const [domainConfigs, setDomainConfigs] = useState<Record<string, { targetApp?: string; logoUrl?: string }>>({});
+  const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const [brandApp, setBrandApp] = useState<string | null>(null);
 
   const setLanguage = (value: typeof language) => {
     setLanguageState(value);
@@ -226,6 +231,15 @@ function App() {
         if (!isMounted) return;
         const list = Array.isArray(data.domains) ? data.domains : [];
         setDomainList(list);
+        if (Array.isArray(data.configs)) {
+          const nextConfigs: Record<string, { targetApp?: string; logoUrl?: string }> = {};
+          data.configs.forEach((entry: { domain?: string; config?: { targetApp?: string; logoUrl?: string } }) => {
+            if (entry?.domain) {
+              nextConfigs[entry.domain] = entry.config || {};
+            }
+          });
+          setDomainConfigs(nextConfigs);
+        }
         if (list.length > 0) {
           refreshDomainStatuses(list);
         }
@@ -234,6 +248,30 @@ function App() {
       }
     };
     loadDomains();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadBranding = async () => {
+      if (!DOMAIN_API_BASE) return;
+      const hostname = window.location.hostname;
+      try {
+        const response = await fetch(
+          `${DOMAIN_API_BASE}/custom-domain?domain=${encodeURIComponent(hostname)}`
+        );
+        const data = await response.json();
+        if (!response.ok || !data?.success) return;
+        if (!isMounted) return;
+        setBrandLogo(data?.config?.logoUrl || null);
+        setBrandApp(data?.config?.targetApp || null);
+      } catch {
+        // ignore branding errors
+      }
+    };
+    loadBranding();
     return () => {
       isMounted = false;
     };
@@ -288,15 +326,19 @@ function App() {
     setDomainError('');
     setDomainLoading(true);
     try {
-    if (!DOMAIN_API_BASE) {
-      setDomainError('Missing VITE_DOMAIN_API_BASE.');
-      setDomainLoading(false);
-      return;
-    }
-    const response = await fetch(`${DOMAIN_API_BASE}/custom-domain`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: domainInput.trim() })
+      if (!DOMAIN_API_BASE) {
+        setDomainError('Missing VITE_DOMAIN_API_BASE.');
+        setDomainLoading(false);
+        return;
+      }
+      const response = await fetch(`${DOMAIN_API_BASE}/custom-domain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          domain: domainInput.trim(),
+          targetApp,
+          logoUrl
+        })
       });
       const data = await response.json();
       if (!response.ok || data?.success === false) {
@@ -304,9 +346,27 @@ function App() {
       }
       setDomainStatus(`Added ${data.domain}. DNS/SSL may take a few minutes.`);
       setDomainInput('');
+      setLogoUrl('');
       if (Array.isArray(data.domains)) {
         setDomainList(data.domains);
         refreshDomainStatuses(data.domains);
+      }
+      if (data?.config) {
+        setDomainConfigs((prev) => ({
+          ...prev,
+          [data.domain]: {
+            targetApp: data.config.targetApp,
+            logoUrl: data.config.logoUrl
+          }
+        }));
+      } else if (Array.isArray(data.configs)) {
+        const nextConfigs: Record<string, { targetApp?: string; logoUrl?: string }> = {};
+        data.configs.forEach((entry: { domain?: string; config?: { targetApp?: string; logoUrl?: string } }) => {
+          if (entry?.domain) {
+            nextConfigs[entry.domain] = entry.config || {};
+          }
+        });
+        setDomainConfigs(nextConfigs);
       }
       pollDomainStatus(data.domain);
     } catch (err) {
@@ -323,7 +383,7 @@ function App() {
         <div className="relative mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-12">
           <header className="flex flex-wrap items-center justify-between gap-4">
             <img
-              src={appLogo}
+              src={brandLogo || appLogo}
               alt={t('app.title')}
               className="h-12 w-auto"
             />
@@ -390,6 +450,11 @@ function App() {
               <p className="mt-3 text-sm text-white/70">
                 Starter shell. Replace this section with your app content.
               </p>
+              {brandApp && (
+                <p className="mt-2 text-xs text-white/50">
+                  Brand target app: {brandApp}
+                </p>
+              )}
               <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/50 px-6 py-5 text-sm text-white/70">
                 <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
                   Starter Notes
@@ -405,16 +470,34 @@ function App() {
             <section className="mt-10 rounded-3xl border border-white/10 bg-white/5 p-8">
               <h2 className="text-2xl font-semibold text-white">Custom Domain Panel</h2>
               <p className="mt-2 text-sm text-white/70">
-                Add a custom domain and point it to this Pages app. This uses the Cloudflare API on
-                your account.
+                Add a custom domain and point it to the correct app. This uses the Cloudflare API
+                on your account.
               </p>
 
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-5 grid gap-3 sm:grid-cols-[1.4fr_1fr]">
                 <input
                   type="text"
                   value={domainInput}
                   onChange={(event) => setDomainInput(event.target.value)}
-                  placeholder="vegr.ai"
+                  placeholder="connect.universi.no"
+                  className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                />
+                <select
+                  value={targetApp}
+                  onChange={(event) => setTargetApp(event.target.value)}
+                  className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                >
+                  <option value="aichat">aichat</option>
+                  <option value="connect">connect</option>
+                  <option value="photos">photos</option>
+                </select>
+              </div>
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                <input
+                  type="text"
+                  value={logoUrl}
+                  onChange={(event) => setLogoUrl(event.target.value)}
+                  placeholder="https://example.com/logo.png"
                   className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
                 />
                 <button
@@ -444,6 +527,7 @@ function App() {
                   <div className="mt-3 space-y-2">
                     {domainList.map((domain) => {
                       const status = domainStatuses[domain];
+                      const config = domainConfigs[domain];
                       const indicatorClass = status?.ready
                         ? 'bg-emerald-400'
                         : status?.pending
@@ -463,6 +547,16 @@ function App() {
                         <div key={domain} className="flex items-center gap-3">
                           <span className={`h-2.5 w-2.5 rounded-full ${indicatorClass}`} />
                           <span>{domain}</span>
+                          {config?.targetApp && (
+                            <span className="text-xs text-white/50">→ {config.targetApp}</span>
+                          )}
+                          {config?.logoUrl && (
+                            <img
+                              src={config.logoUrl}
+                              alt={`${domain} logo`}
+                              className="h-5 w-auto rounded-full border border-white/10 bg-white/5"
+                            />
+                          )}
                           <span className="text-xs text-white/50">{label}</span>
                         </div>
                       );

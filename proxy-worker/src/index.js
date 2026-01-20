@@ -1,11 +1,42 @@
 export default {
   async fetch(request, env) {
-    const targetOrigin = env.TARGET_ORIGIN;
-    if (!targetOrigin) {
-      return new Response('Missing TARGET_ORIGIN', { status: 500 });
+    const defaultOrigin = env.DEFAULT_ORIGIN || env.TARGET_ORIGIN;
+    if (!defaultOrigin) {
+      return new Response('Missing DEFAULT_ORIGIN', { status: 500 });
     }
 
+    const appOrigins = {
+      aichat: env.APP_AICHAT_ORIGIN,
+      connect: env.APP_CONNECT_ORIGIN,
+      photos: env.APP_PHOTOS_ORIGIN
+    };
+
     const url = new URL(request.url);
+    let targetOrigin = defaultOrigin;
+
+    if (env.BRAND_CONFIG) {
+      const lookupKeys = [`brand:${url.hostname}`];
+      if (url.hostname.startsWith('www.')) {
+        lookupKeys.push(`brand:${url.hostname.replace(/^www\./, '')}`);
+      }
+
+      for (const key of lookupKeys) {
+        const configRaw = await env.BRAND_CONFIG.get(key);
+        if (configRaw) {
+          try {
+            const config = JSON.parse(configRaw);
+            const candidate = appOrigins[config?.targetApp] || defaultOrigin;
+            if (candidate) {
+              targetOrigin = candidate;
+            }
+            break;
+          } catch {
+            // ignore config parse errors
+          }
+        }
+      }
+    }
+
     const targetUrl = new URL(targetOrigin);
     targetUrl.pathname = url.pathname;
     targetUrl.search = url.search;

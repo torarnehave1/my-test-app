@@ -122,6 +122,15 @@ This keeps branding headers working (reverse proxy).
 - **Domain Worker** (control panel API): `domain-worker/`
 - **UI panel**: `src/App.tsx`
 
+### KV storage (brand mapping)
+Both workers use a KV namespace to store the brand mapping:
+
+- Key: `brand:<domain>`
+- Value: `{ domain, targetApp, logoUrl, createdAt, updatedAt }`
+
+Create it once and bind it in **both** workers.
+Update `proxy-worker/wrangler.toml` and `domain-worker/wrangler.toml` with the KV id.
+
 ### Required environment variables (Domain Worker)
 Set these on the **domain worker** in Cloudflare (or with `wrangler secret`):
 
@@ -129,11 +138,16 @@ Set these on the **domain worker** in Cloudflare (or with `wrangler secret`):
 - `TARGET_WORKER_NAME` = proxy worker name (example: `test-brand-proxy-worker`)
 - `TARGET_WORKER_DOMAIN` = proxy worker workers.dev domain
   (example: `test-brand-proxy-worker.yourname.workers.dev`)
+ - `BRAND_CONFIG` = KV binding (see `wrangler.toml`)
 
 ### Required environment variables (Proxy Worker)
 Set this on the **proxy worker**:
 
-- `TARGET_ORIGIN` = `https://my-test-app.vegvisr.org`
+- `DEFAULT_ORIGIN` = `https://my-test-app.vegvisr.org`
+- `APP_AICHAT_ORIGIN` = `https://aichat.vegvisr.org`
+- `APP_CONNECT_ORIGIN` = `https://connect.vegvisr.org`
+- `APP_PHOTOS_ORIGIN` = `https://photos.vegvisr.org`
+- `BRAND_CONFIG` = KV binding (same namespace as domain worker)
 
 ### Frontend configuration
 Set in your test app build env (Vite):
@@ -148,7 +162,7 @@ The domain worker exposes:
 
 Body example:
 ```json
-{ "domain": "vegr.ai" }
+{ "domain": "connect.universi.no", "targetApp": "connect", "logoUrl": "https://example.com/logo.png" }
 ```
 
 ### Notes

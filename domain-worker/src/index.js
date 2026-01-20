@@ -18,6 +18,8 @@ const isValidDomain = (value) => {
 };
 
 const normalizeDomain = (value) => value.trim().toLowerCase();
+const normalizeApp = (value) => value.trim().toLowerCase();
+const isValidApp = (value) => /^[a-z0-9-]{2,50}$/i.test(value);
 
 const getAuthHeaders = (token) => ({
   Authorization: `Bearer ${token}`,
@@ -89,6 +91,24 @@ const listWorkerRoutes = async ({ zoneId, token }) => {
     { headers: getAuthHeaders(token) }
   );
   return Array.isArray(data?.result) ? data.result : [];
+};
+
+const readBrandConfig = async (env, domain) => {
+  if (!env.BRAND_CONFIG) return null;
+  const primary = await env.BRAND_CONFIG.get(`brand:${domain}`);
+  if (primary) {
+    return JSON.parse(primary);
+  }
+  if (domain.startsWith('www.')) {
+    const fallback = await env.BRAND_CONFIG.get(`brand:${domain.replace(/^www\./, '')}`);
+    return fallback ? JSON.parse(fallback) : null;
+  }
+  return null;
+};
+
+const writeBrandConfig = async (env, domain, config) => {
+  if (!env.BRAND_CONFIG) return;
+  await env.BRAND_CONFIG.put(`brand:${domain}`, JSON.stringify(config));
 };
 
 const ensureWorkerRoute = async ({ zoneId, hostname, script, token }) => {
@@ -173,6 +193,12 @@ export default {
         500
       );
     }
+    if (!env.BRAND_CONFIG) {
+      return jsonResponse(
+        { success: false, message: 'Missing BRAND_CONFIG KV binding.' },
+        500
+      );
+    }
 
     if (request.method === 'GET') {
       try {
@@ -187,14 +213,21 @@ export default {
             token: CF_API_TOKEN,
             script: TARGET_WORKER_NAME
           });
-          return jsonResponse({ success: true, status });
+          const config = await readBrandConfig(env, domain);
+          return jsonResponse({ success: true, status, config });
         }
 
         const domains = await listDomainsForScript({
           token: CF_API_TOKEN,
           script: TARGET_WORKER_NAME
         });
-        return jsonResponse({ success: true, domains });
+        const configs = await Promise.all(
+          domains.map(async (domain) => ({
+            domain,
+            config: await readBrandConfig(env, domain)
+          }))
+        );
+        return jsonResponse({ success: true, domains, configs });
       } catch (error) {
         return jsonResponse({ success: false, message: error.message }, 500);
       }
@@ -212,8 +245,14 @@ export default {
     }
 
     const domain = normalizeDomain(body?.domain || '');
+    const targetAppRaw = body?.targetApp || '';
+    const logoUrl = typeof body?.logoUrl === 'string' ? body.logoUrl.trim() : '';
+    const targetApp = normalizeApp(targetAppRaw || '');
     if (!domain || !isValidDomain(domain)) {
       return jsonResponse({ success: false, message: 'Please provide a valid domain.' }, 400);
+    }
+    if (!targetApp || !isValidApp(targetApp)) {
+      return jsonResponse({ success: false, message: 'Please provide a valid target app.' }, 400);
     }
 
     let step = 'start';
@@ -235,16 +274,36 @@ export default {
         token: CF_API_TOKEN
       });
 
+      step = 'save-config';
+      const existingConfig = await readBrandConfig(env, domain);
+      const now = new Date().toISOString();
+      const config = {
+        domain,
+        targetApp,
+        logoUrl,
+        updatedAt: now,
+        createdAt: existingConfig?.createdAt || now
+      };
+      await writeBrandConfig(env, domain, config);
+
       step = 'list-domains';
       const domains = await listDomainsForScript({
         token: CF_API_TOKEN,
         script: TARGET_WORKER_NAME
       });
+      const configs = await Promise.all(
+        domains.map(async (domainName) => ({
+          domain: domainName,
+          config: await readBrandConfig(env, domainName)
+        }))
+      );
 
       return jsonResponse({
         success: true,
         domain,
-        domains
+        domains,
+        config,
+        configs
       });
     } catch (error) {
       console.error('Domain setup failed', { step, message: error.message, data: error.data });
