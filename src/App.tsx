@@ -22,14 +22,16 @@ function App() {
   const [domainInput, setDomainInput] = useState('');
   const [targetApp, setTargetApp] = useState('aichat');
   const [logoUrl, setLogoUrl] = useState('');
+  const [slogan, setSlogan] = useState('');
   const [domainStatus, setDomainStatus] = useState('');
   const [domainError, setDomainError] = useState('');
   const [domainLoading, setDomainLoading] = useState(false);
   const [domainList, setDomainList] = useState<string[]>([]);
   const [domainStatuses, setDomainStatuses] = useState<Record<string, { ready: boolean; pending: boolean; error?: string }>>({});
-  const [domainConfigs, setDomainConfigs] = useState<Record<string, { targetApp?: string; logoUrl?: string }>>({});
+  const [domainConfigs, setDomainConfigs] = useState<Record<string, { targetApp?: string; logoUrl?: string; slogan?: string }>>({});
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [brandApp, setBrandApp] = useState<string | null>(null);
+  const [brandSlogan, setBrandSlogan] = useState<string | null>(null);
 
   const setLanguage = (value: typeof language) => {
     setLanguageState(value);
@@ -232,8 +234,8 @@ function App() {
         const list = Array.isArray(data.domains) ? data.domains : [];
         setDomainList(list);
         if (Array.isArray(data.configs)) {
-          const nextConfigs: Record<string, { targetApp?: string; logoUrl?: string }> = {};
-          data.configs.forEach((entry: { domain?: string; config?: { targetApp?: string; logoUrl?: string } }) => {
+          const nextConfigs: Record<string, { targetApp?: string; logoUrl?: string; slogan?: string }> = {};
+          data.configs.forEach((entry: { domain?: string; config?: { targetApp?: string; logoUrl?: string; slogan?: string } }) => {
             if (entry?.domain) {
               nextConfigs[entry.domain] = entry.config || {};
             }
@@ -267,6 +269,7 @@ function App() {
         if (!isMounted) return;
         setBrandLogo(data?.config?.logoUrl || null);
         setBrandApp(data?.config?.targetApp || null);
+        setBrandSlogan(data?.config?.slogan || null);
       } catch {
         // ignore branding errors
       }
@@ -320,6 +323,14 @@ function App() {
     }
   };
 
+  const handleEditDomain = (domain: string) => {
+    const config = domainConfigs[domain] || {};
+    setDomainInput(domain);
+    setTargetApp(config.targetApp || 'aichat');
+    setLogoUrl(config.logoUrl || '');
+    setSlogan(config.slogan || '');
+  };
+
   const handleAddDomain = async () => {
     if (!domainInput.trim()) return;
     setDomainStatus('');
@@ -337,7 +348,8 @@ function App() {
         body: JSON.stringify({
           domain: domainInput.trim(),
           targetApp,
-          logoUrl
+          logoUrl,
+          slogan
         })
       });
       const data = await response.json();
@@ -347,6 +359,7 @@ function App() {
       setDomainStatus(`Added ${data.domain}. DNS/SSL may take a few minutes.`);
       setDomainInput('');
       setLogoUrl('');
+      setSlogan('');
       if (Array.isArray(data.domains)) {
         setDomainList(data.domains);
         refreshDomainStatuses(data.domains);
@@ -356,12 +369,13 @@ function App() {
           ...prev,
           [data.domain]: {
             targetApp: data.config.targetApp,
-            logoUrl: data.config.logoUrl
+            logoUrl: data.config.logoUrl,
+            slogan: data.config.slogan
           }
         }));
       } else if (Array.isArray(data.configs)) {
-        const nextConfigs: Record<string, { targetApp?: string; logoUrl?: string }> = {};
-        data.configs.forEach((entry: { domain?: string; config?: { targetApp?: string; logoUrl?: string } }) => {
+        const nextConfigs: Record<string, { targetApp?: string; logoUrl?: string; slogan?: string }> = {};
+        data.configs.forEach((entry: { domain?: string; config?: { targetApp?: string; logoUrl?: string; slogan?: string } }) => {
           if (entry?.domain) {
             nextConfigs[entry.domain] = entry.config || {};
           }
@@ -455,6 +469,11 @@ function App() {
                   Brand target app: {brandApp}
                 </p>
               )}
+              {brandSlogan && (
+                <p className="mt-1 text-sm text-white/70">
+                  {brandSlogan}
+                </p>
+              )}
               <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/50 px-6 py-5 text-sm text-white/70">
                 <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
                   Starter Notes
@@ -498,6 +517,13 @@ function App() {
                   value={logoUrl}
                   onChange={(event) => setLogoUrl(event.target.value)}
                   placeholder="https://example.com/logo.png"
+                  className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                />
+                <input
+                  type="text"
+                  value={slogan}
+                  onChange={(event) => setSlogan(event.target.value)}
+                  placeholder="Brand slogan"
                   className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
                 />
                 <button
@@ -544,7 +570,7 @@ function App() {
                             : 'Unknown';
 
                       return (
-                        <div key={domain} className="flex items-center gap-3">
+                        <div key={domain} className="flex flex-wrap items-center gap-3">
                           <span className={`h-2.5 w-2.5 rounded-full ${indicatorClass}`} />
                           <span>{domain}</span>
                           {config?.targetApp && (
@@ -557,7 +583,17 @@ function App() {
                               className="h-5 w-auto rounded-full border border-white/10 bg-white/5"
                             />
                           )}
+                          {config?.slogan && (
+                            <span className="text-xs text-white/40">{config.slogan}</span>
+                          )}
                           <span className="text-xs text-white/50">{label}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleEditDomain(domain)}
+                            className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/70 hover:border-white/30"
+                          >
+                            Edit
+                          </button>
                         </div>
                       );
                     })}

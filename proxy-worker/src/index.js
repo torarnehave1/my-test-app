@@ -37,6 +37,14 @@ export default {
       }
     }
 
+    if (targetOrigin === defaultOrigin) {
+      const hostParts = url.hostname.split('.');
+      const subdomain = hostParts[0];
+      if (appOrigins[subdomain]) {
+        targetOrigin = appOrigins[subdomain];
+      }
+    }
+
     const targetUrl = new URL(targetOrigin);
     targetUrl.pathname = url.pathname;
     targetUrl.search = url.search;

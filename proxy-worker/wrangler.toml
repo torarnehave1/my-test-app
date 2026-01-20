@@ -2,6 +2,12 @@ name = "test-brand-proxy-worker"
 main = "src/index.js"
 compatibility_date = "2025-01-15"
 
+[vars]
+DEFAULT_ORIGIN = "https://my-test-app.vegvisr.org"
+APP_AICHAT_ORIGIN = "https://aichat.vegvisr.org"
+APP_CONNECT_ORIGIN = "https://connect.vegvisr.org"
+APP_PHOTOS_ORIGIN = "https://photos.vegvisr.org"
+
 [[kv_namespaces]]
 binding = "BRAND_CONFIG"
 id = "18348b781fd64e20bfd9694a06c3020d"

@@ -126,7 +126,7 @@ This keeps branding headers working (reverse proxy).
 Both workers use a KV namespace to store the brand mapping:
 
 - Key: `brand:<domain>`
-- Value: `{ domain, targetApp, logoUrl, createdAt, updatedAt }`
+- Value: `{ domain, targetApp, logoUrl, slogan, createdAt, updatedAt }`
 
 Create it once and bind it in **both** workers.
 Update `proxy-worker/wrangler.toml` and `domain-worker/wrangler.toml` with the KV id.
@@ -162,7 +162,7 @@ The domain worker exposes:
 
 Body example:
 ```json
-{ "domain": "connect.universi.no", "targetApp": "connect", "logoUrl": "https://example.com/logo.png" }
+{ "domain": "connect.universi.no", "targetApp": "connect", "logoUrl": "https://example.com/logo.png", "slogan": "Move with intention" }
 ```
 
 ### Notes

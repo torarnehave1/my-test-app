@@ -247,6 +247,7 @@ export default {
     const domain = normalizeDomain(body?.domain || '');
     const targetAppRaw = body?.targetApp || '';
     const logoUrl = typeof body?.logoUrl === 'string' ? body.logoUrl.trim() : '';
+    const slogan = typeof body?.slogan === 'string' ? body.slogan.trim() : '';
     const targetApp = normalizeApp(targetAppRaw || '');
     if (!domain || !isValidDomain(domain)) {
       return jsonResponse({ success: false, message: 'Please provide a valid domain.' }, 400);
@@ -281,6 +282,7 @@ export default {
         domain,
         targetApp,
         logoUrl,
+        slogan,
         updatedAt: now,
         createdAt: existingConfig?.createdAt || now
       };
