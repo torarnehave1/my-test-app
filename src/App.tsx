@@ -8,6 +8,7 @@ import { useTranslation } from './lib/useTranslation';
 
 const MAGIC_BASE = 'https://cookie.vegvisr.org';
 const DASHBOARD_BASE = 'https://dashboard.vegvisr.org';
+const DOMAIN_API_BASE = 'https://test-domain-worker.torarnehave.workers.dev';
 
 function App() {
   const [language, setLanguageState] = useState(getStoredLanguage());
@@ -18,6 +19,11 @@ function App() {
   const [loginStatus, setLoginStatus] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [domainInput, setDomainInput] = useState('');
+  const [domainStatus, setDomainStatus] = useState('');
+  const [domainError, setDomainError] = useState('');
+  const [domainLoading, setDomainLoading] = useState(false);
+  const [domainList, setDomainList] = useState<string[]>([]);
 
   const setLanguage = (value: typeof language) => {
     setLanguageState(value);
@@ -208,6 +214,58 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    const loadDomains = async () => {
+      try {
+        if (!DOMAIN_API_BASE) return;
+        const response = await fetch(`${DOMAIN_API_BASE}/custom-domain`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!isMounted) return;
+        setDomainList(Array.isArray(data.domains) ? data.domains : []);
+      } catch {
+        // ignore list errors for now
+      }
+    };
+    loadDomains();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleAddDomain = async () => {
+    if (!domainInput.trim()) return;
+    setDomainStatus('');
+    setDomainError('');
+    setDomainLoading(true);
+    try {
+    if (!DOMAIN_API_BASE) {
+      setDomainError('Missing VITE_DOMAIN_API_BASE.');
+      setDomainLoading(false);
+      return;
+    }
+    const response = await fetch(`${DOMAIN_API_BASE}/custom-domain`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: domainInput.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.message || 'Failed to add domain.');
+      }
+      setDomainStatus(`Added ${data.domain}. DNS/SSL may take a few minutes.`);
+      setDomainInput('');
+      if (Array.isArray(data.domains)) {
+        setDomainList(data.domains);
+      }
+    } catch (err) {
+      setDomainError(err instanceof Error ? err.message : 'Failed to add domain.');
+    } finally {
+      setDomainLoading(false);
+    }
+  };
+
   return (
     <LanguageContext.Provider value={contextValue}>
       <div className="min-h-screen bg-slate-950 text-white">
@@ -291,6 +349,54 @@ function App() {
                   <li>Language selector and ecosystem nav are ready.</li>
                   <li>Replace logo + icon assets for your app.</li>
                 </ul>
+              </div>
+            </section>
+
+            <section className="mt-10 rounded-3xl border border-white/10 bg-white/5 p-8">
+              <h2 className="text-2xl font-semibold text-white">Custom Domain Panel</h2>
+              <p className="mt-2 text-sm text-white/70">
+                Add a custom domain and point it to this Pages app. This uses the Cloudflare API on
+                your account.
+              </p>
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <input
+                  type="text"
+                  value={domainInput}
+                  onChange={(event) => setDomainInput(event.target.value)}
+                  placeholder="vegr.ai"
+                  className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddDomain}
+                  disabled={domainLoading}
+                  className="rounded-2xl bg-gradient-to-r from-sky-500 to-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/30"
+                >
+                  {domainLoading ? 'Adding...' : 'Add domain'}
+                </button>
+              </div>
+
+              {domainStatus && (
+                <p className="mt-3 text-xs text-emerald-300">{domainStatus}</p>
+              )}
+              {domainError && (
+                <p className="mt-3 text-xs text-rose-300">{domainError}</p>
+              )}
+
+              <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/50 px-6 py-5 text-sm text-white/70">
+                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+                  Domains on this project
+                </div>
+                {domainList.length === 0 ? (
+                  <p className="mt-3 text-white/50">No custom domains found yet.</p>
+                ) : (
+                  <ul className="mt-3 list-disc space-y-1 pl-5">
+                    {domainList.map((domain) => (
+                      <li key={domain}>{domain}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </section>
           </main>
