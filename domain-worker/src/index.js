@@ -83,32 +83,76 @@ const ensureDnsRecord = async ({ zoneId, hostname, target, token }) => {
   });
 };
 
-const attachCustomDomain = async ({ accountId, service, hostname, token }) => {
-  try {
-    return await cfRequest(`${API_BASE}/accounts/${accountId}/workers/domains`, {
-      method: 'POST',
-      headers: getAuthHeaders(token),
-      body: JSON.stringify({ hostname, service })
-    });
-  } catch (error) {
-    const message = error?.data?.errors?.[0]?.message || error.message || '';
-    if (message.toLowerCase().includes('already exists')) {
-      return { result: { hostname, status: 'active' } };
-    }
-    throw error;
-  }
-};
-
-const listWorkerDomains = async ({ accountId, token, service }) => {
+const listWorkerRoutes = async ({ zoneId, token }) => {
   const data = await cfRequest(
-    `${API_BASE}/accounts/${accountId}/workers/domains`,
+    `${API_BASE}/zones/${zoneId}/workers/routes`,
     { headers: getAuthHeaders(token) }
   );
-  if (!Array.isArray(data?.result)) return [];
-  return data.result
-    .filter((entry) => !service || entry?.service === service)
-    .map((entry) => entry?.hostname)
-    .filter(Boolean);
+  return Array.isArray(data?.result) ? data.result : [];
+};
+
+const ensureWorkerRoute = async ({ zoneId, hostname, script, token }) => {
+  const pattern = `${hostname}/*`;
+  const routes = await listWorkerRoutes({ zoneId, token });
+  const existing = routes.find((route) => route.pattern === pattern);
+
+  if (existing) {
+    if (existing.script === script) {
+      return existing;
+    }
+    return cfRequest(`${API_BASE}/zones/${zoneId}/workers/routes/${existing.id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(token),
+      body: JSON.stringify({ pattern, script })
+    });
+  }
+
+  return cfRequest(`${API_BASE}/zones/${zoneId}/workers/routes`, {
+    method: 'POST',
+    headers: getAuthHeaders(token),
+    body: JSON.stringify({ pattern, script })
+  });
+};
+
+const listDomainsForScript = async ({ token, script }) => {
+  const zones = await cfRequest(`${API_BASE}/zones`, {
+    headers: getAuthHeaders(token)
+  });
+  const results = Array.isArray(zones?.result) ? zones.result : [];
+  const domains = [];
+
+  for (const zone of results) {
+    const routes = await listWorkerRoutes({ zoneId: zone.id, token });
+    routes.forEach((route) => {
+      if (route.script === script && typeof route.pattern === 'string') {
+        domains.push(route.pattern.replace(/\/\*$/, ''));
+      }
+    });
+  }
+
+  return domains;
+};
+
+const getDomainStatus = async ({ hostname, token, script }) => {
+  const zone = await findZone(hostname, token);
+  const dns = await cfRequest(
+    `${API_BASE}/zones/${zone.id}/dns_records?type=CNAME&name=${encodeURIComponent(hostname)}`,
+    { headers: getAuthHeaders(token) }
+  );
+  const dnsRecord = Array.isArray(dns?.result) ? dns.result[0] : null;
+  const routes = await listWorkerRoutes({ zoneId: zone.id, token });
+  const routePattern = `${hostname}/*`;
+  const route = routes.find((item) => item.pattern === routePattern);
+
+  return {
+    hostname,
+    zone: zone.name,
+    dns: dnsRecord
+      ? { ok: true, content: dnsRecord.content, proxied: dnsRecord.proxied }
+      : { ok: false },
+    route: route ? { ok: true, script: route.script } : { ok: false },
+    ready: Boolean(dnsRecord) && Boolean(route) && route.script === script
+  };
 };
 
 export default {
@@ -122,8 +166,8 @@ export default {
       return jsonResponse({ success: false, message: 'Not Found' }, 404);
     }
 
-    const { CF_API_TOKEN, CF_ACCOUNT_ID, TARGET_WORKER_NAME, TARGET_WORKER_DOMAIN } = env;
-    if (!CF_API_TOKEN || !CF_ACCOUNT_ID || !TARGET_WORKER_NAME || !TARGET_WORKER_DOMAIN) {
+    const { CF_API_TOKEN, TARGET_WORKER_NAME, TARGET_WORKER_DOMAIN } = env;
+    if (!CF_API_TOKEN || !TARGET_WORKER_NAME || !TARGET_WORKER_DOMAIN) {
       return jsonResponse(
         { success: false, message: 'Missing worker env vars.' },
         500
@@ -132,10 +176,23 @@ export default {
 
     if (request.method === 'GET') {
       try {
-        const domains = await listWorkerDomains({
-          accountId: CF_ACCOUNT_ID,
+        const domainParam = url.searchParams.get('domain');
+        if (domainParam) {
+          const domain = normalizeDomain(domainParam);
+          if (!domain || !isValidDomain(domain)) {
+            return jsonResponse({ success: false, message: 'Invalid domain.' }, 400);
+          }
+          const status = await getDomainStatus({
+            hostname: domain,
+            token: CF_API_TOKEN,
+            script: TARGET_WORKER_NAME
+          });
+          return jsonResponse({ success: true, status });
+        }
+
+        const domains = await listDomainsForScript({
           token: CF_API_TOKEN,
-          service: TARGET_WORKER_NAME
+          script: TARGET_WORKER_NAME
         });
         return jsonResponse({ success: true, domains });
       } catch (error) {
@@ -159,25 +216,29 @@ export default {
       return jsonResponse({ success: false, message: 'Please provide a valid domain.' }, 400);
     }
 
+    let step = 'start';
     try {
+      step = 'find-zone';
       const zone = await findZone(domain, CF_API_TOKEN);
+      step = 'ensure-dns';
       await ensureDnsRecord({
         zoneId: zone.id,
         hostname: domain,
         target: TARGET_WORKER_DOMAIN,
         token: CF_API_TOKEN
       });
-      await attachCustomDomain({
-        accountId: CF_ACCOUNT_ID,
-        service: TARGET_WORKER_NAME,
+      step = 'attach-domain';
+      await ensureWorkerRoute({
+        zoneId: zone.id,
         hostname: domain,
+        script: TARGET_WORKER_NAME,
         token: CF_API_TOKEN
       });
 
-      const domains = await listWorkerDomains({
-        accountId: CF_ACCOUNT_ID,
+      step = 'list-domains';
+      const domains = await listDomainsForScript({
         token: CF_API_TOKEN,
-        service: TARGET_WORKER_NAME
+        script: TARGET_WORKER_NAME
       });
 
       return jsonResponse({
@@ -186,7 +247,16 @@ export default {
         domains
       });
     } catch (error) {
-      return jsonResponse({ success: false, message: error.message }, 500);
+      console.error('Domain setup failed', { step, message: error.message, data: error.data });
+      return jsonResponse(
+        {
+          success: false,
+          message: error.message,
+          step,
+          details: error.data || null
+        },
+        500
+      );
     }
   }
 };

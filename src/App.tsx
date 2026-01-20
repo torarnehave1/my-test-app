@@ -24,6 +24,7 @@ function App() {
   const [domainError, setDomainError] = useState('');
   const [domainLoading, setDomainLoading] = useState(false);
   const [domainList, setDomainList] = useState<string[]>([]);
+  const [domainStatuses, setDomainStatuses] = useState<Record<string, { ready: boolean; pending: boolean; error?: string }>>({});
 
   const setLanguage = (value: typeof language) => {
     setLanguageState(value);
@@ -223,7 +224,11 @@ function App() {
         if (!response.ok) return;
         const data = await response.json();
         if (!isMounted) return;
-        setDomainList(Array.isArray(data.domains) ? data.domains : []);
+        const list = Array.isArray(data.domains) ? data.domains : [];
+        setDomainList(list);
+        if (list.length > 0) {
+          refreshDomainStatuses(list);
+        }
       } catch {
         // ignore list errors for now
       }
@@ -233,6 +238,49 @@ function App() {
       isMounted = false;
     };
   }, []);
+
+  const fetchDomainStatus = async (domain: string) => {
+    try {
+      const response = await fetch(
+        `${DOMAIN_API_BASE}/custom-domain?domain=${encodeURIComponent(domain)}`
+      );
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        return { ready: false, pending: false, error: data?.message || 'Error' };
+      }
+      const ready = Boolean(data?.status?.ready);
+      return { ready, pending: !ready };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error';
+      return { ready: false, pending: false, error: message };
+    }
+  };
+
+  const refreshDomainStatuses = async (domains: string[]) => {
+    if (!DOMAIN_API_BASE || domains.length === 0) return;
+    const statusEntries = await Promise.all(
+      domains.map(async (domain) => [domain, await fetchDomainStatus(domain)] as const)
+    );
+
+    setDomainStatuses((prev) => {
+      const next = { ...prev };
+      statusEntries.forEach(([domain, status]) => {
+        next[domain] = status;
+      });
+      return next;
+    });
+  };
+
+  const pollDomainStatus = async (domain: string) => {
+    if (!DOMAIN_API_BASE) return;
+    const attempts = 12;
+    for (let i = 0; i < attempts; i += 1) {
+      const status = await fetchDomainStatus(domain);
+      setDomainStatuses((prev) => ({ ...prev, [domain]: status }));
+      if (status.ready) return;
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+    }
+  };
 
   const handleAddDomain = async () => {
     if (!domainInput.trim()) return;
@@ -258,7 +306,9 @@ function App() {
       setDomainInput('');
       if (Array.isArray(data.domains)) {
         setDomainList(data.domains);
+        refreshDomainStatuses(data.domains);
       }
+      pollDomainStatus(data.domain);
     } catch (err) {
       setDomainError(err instanceof Error ? err.message : 'Failed to add domain.');
     } finally {
@@ -391,11 +441,40 @@ function App() {
                 {domainList.length === 0 ? (
                   <p className="mt-3 text-white/50">No custom domains found yet.</p>
                 ) : (
-                  <ul className="mt-3 list-disc space-y-1 pl-5">
-                    {domainList.map((domain) => (
-                      <li key={domain}>{domain}</li>
-                    ))}
-                  </ul>
+                  <div className="mt-3 space-y-2">
+                    {domainList.map((domain) => {
+                      const status = domainStatuses[domain];
+                      const indicatorClass = status?.ready
+                        ? 'bg-emerald-400'
+                        : status?.pending
+                          ? 'bg-amber-400'
+                          : status?.error
+                            ? 'bg-rose-400'
+                            : 'bg-white/30';
+                      const label = status?.ready
+                        ? 'Ready'
+                        : status?.pending
+                          ? 'Pending'
+                          : status?.error
+                            ? 'Error'
+                            : 'Unknown';
+
+                      return (
+                        <div key={domain} className="flex items-center gap-3">
+                          <span className={`h-2.5 w-2.5 rounded-full ${indicatorClass}`} />
+                          <span>{domain}</span>
+                          <span className="text-xs text-white/50">{label}</span>
+                        </div>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => refreshDomainStatuses(domainList)}
+                      className="mt-2 rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 hover:border-white/30"
+                    >
+                      Refresh status
+                    </button>
+                  </div>
                 )}
               </div>
             </section>

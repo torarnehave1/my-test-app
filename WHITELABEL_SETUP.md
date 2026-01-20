@@ -125,8 +125,7 @@ This keeps branding headers working (reverse proxy).
 ### Required environment variables (Domain Worker)
 Set these on the **domain worker** in Cloudflare (or with `wrangler secret`):
 
-- `CF_API_TOKEN` = API token with DNS edit + Workers edit
-- `CF_ACCOUNT_ID` = your Cloudflare account ID
+- `CF_API_TOKEN` = API token with **Zone DNS Edit** + **Zone Workers Routes Edit**
 - `TARGET_WORKER_NAME` = proxy worker name (example: `test-brand-proxy-worker`)
 - `TARGET_WORKER_DOMAIN` = proxy worker workers.dev domain
   (example: `test-brand-proxy-worker.yourname.workers.dev`)
@@ -153,5 +152,6 @@ Body example:
 ```
 
 ### Notes
+- This uses **Workers Routes** instead of Workers custom domains.
 - This only works for domains in your Cloudflare account.
 - DNS + SSL can take a few minutes after adding a domain.
