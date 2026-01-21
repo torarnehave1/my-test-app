@@ -69,6 +69,8 @@ function App() {
   const [aiBrandName, setAiBrandName] = useState('');
   const [aiAudience, setAiAudience] = useState('');
   const [aiNotes, setAiNotes] = useState('');
+  const [aiGradientStart, setAiGradientStart] = useState('#3b82f6');
+  const [aiGradientEnd, setAiGradientEnd] = useState('#8b5cf6');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
   const [aiStatus, setAiStatus] = useState('');
@@ -546,7 +548,8 @@ function App() {
           brandName: aiBrandName,
           audience: aiAudience,
           appName: appNameMap[targetApp] || 'Vegvisr Connect',
-          prompt: aiNotes
+          prompt: aiNotes,
+          gradient: { start: aiGradientStart, end: aiGradientEnd }
         })
       });
       const data = await response.json();
@@ -772,6 +775,36 @@ function App() {
                         placeholder="Audience (optional)"
                         className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
                       />
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white">
+                        <span className="text-white/60">Gradient start</span>
+                        <input
+                          type="color"
+                          value={aiGradientStart}
+                          onChange={(event) => setAiGradientStart(event.target.value)}
+                          className="h-6 w-10 cursor-pointer rounded-full border border-white/20 bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={aiGradientStart}
+                          onChange={(event) => setAiGradientStart(event.target.value)}
+                          className="w-24 rounded-xl border border-white/10 bg-slate-900/80 px-2 py-1 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white">
+                        <span className="text-white/60">Gradient end</span>
+                        <input
+                          type="color"
+                          value={aiGradientEnd}
+                          onChange={(event) => setAiGradientEnd(event.target.value)}
+                          className="h-6 w-10 cursor-pointer rounded-full border border-white/20 bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={aiGradientEnd}
+                          onChange={(event) => setAiGradientEnd(event.target.value)}
+                          className="w-24 rounded-xl border border-white/10 bg-slate-900/80 px-2 py-1 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                        />
+                      </div>
                       <input
                         type="text"
                         value={aiNotes}
@@ -875,6 +908,36 @@ function App() {
                       placeholder="Audience (optional)"
                       className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
                     />
+                    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white">
+                      <span className="text-white/60">Gradient start</span>
+                      <input
+                        type="color"
+                        value={aiGradientStart}
+                        onChange={(event) => setAiGradientStart(event.target.value)}
+                        className="h-6 w-10 cursor-pointer rounded-full border border-white/20 bg-transparent"
+                      />
+                      <input
+                        type="text"
+                        value={aiGradientStart}
+                        onChange={(event) => setAiGradientStart(event.target.value)}
+                        className="w-24 rounded-xl border border-white/10 bg-slate-900/80 px-2 py-1 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white">
+                      <span className="text-white/60">Gradient end</span>
+                      <input
+                        type="color"
+                        value={aiGradientEnd}
+                        onChange={(event) => setAiGradientEnd(event.target.value)}
+                        className="h-6 w-10 cursor-pointer rounded-full border border-white/20 bg-transparent"
+                      />
+                      <input
+                        type="text"
+                        value={aiGradientEnd}
+                        onChange={(event) => setAiGradientEnd(event.target.value)}
+                        className="w-24 rounded-xl border border-white/10 bg-slate-900/80 px-2 py-1 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                      />
+                    </div>
                     <input
                       type="text"
                       value={aiNotes}
