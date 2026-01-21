@@ -86,8 +86,8 @@ function App() {
   const lastBrandingUpdate = useRef<'json' | 'form' | null>(null);
   const [splitRatio, setSplitRatio] = useState(50);
   const [isResizing, setIsResizing] = useState(false);
-  const [previewNonce, setPreviewNonce] = useState(0);
   const splitRef = useRef<HTMLDivElement | null>(null);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [aiBrandName, setAiBrandName] = useState('');
   const [aiAudience, setAiAudience] = useState('');
   const [aiNotes, setAiNotes] = useState('');
@@ -415,6 +415,47 @@ function App() {
       </div>
     </div>
   );
+
+  const renderEditableCopy = (
+    key: keyof NonNullable<BrandingPreview['copy']>,
+    value: string | undefined,
+    placeholder: string,
+    className: string,
+    inputClassName?: string
+  ) => {
+    const fieldKey = `copy.${key}`;
+    if (editingKey === fieldKey) {
+      return (
+        <input
+          value={value || ''}
+          onChange={(event) => updateBrandingDraft({ copy: { [key]: event.target.value } })}
+          onBlur={() => setEditingKey(null)}
+          autoFocus
+          placeholder={placeholder}
+          className={cx(
+            'w-full rounded-lg border border-white/20 bg-white/10 px-2 py-1 text-sm text-white outline-none',
+            inputClassName
+          )}
+        />
+      );
+    }
+
+    return (
+      <span
+        role="button"
+        tabIndex={0}
+        onClick={() => setEditingKey(fieldKey)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            setEditingKey(fieldKey);
+          }
+        }}
+        className={cx('cursor-text text-white/90 hover:text-white', className)}
+      >
+        {value || placeholder}
+      </span>
+    );
+  };
 
   useEffect(() => {
     if (!brandingJson.trim()) {
@@ -837,7 +878,6 @@ function App() {
           data.config.branding ? JSON.stringify(data.config.branding, null, 2) : brandingJson
         );
       }
-      setPreviewNonce((prev) => prev + 1);
       if (Array.isArray(data.domains)) {
         setDomainList(data.domains);
         refreshDomainStatuses(data.domains);
@@ -1024,33 +1064,108 @@ function App() {
                     className="lg:pr-6"
                     style={{ flexBasis: `${splitRatio}%` }}
                   >
-                    <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/60">
-                      <span>Branding preview</span>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewNonce((prev) => prev + 1)}
-                        className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-white/70 hover:border-white/30"
-                      >
-                        Refresh preview
-                      </button>
+                    <div className="text-xs uppercase tracking-[0.3em] text-white/60">
+                      Branding preview (click text to edit)
                     </div>
-                    <div className="mt-3 rounded-3xl border border-white/10 bg-white/5 p-3">
-                      <div className="mb-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
-                        {domainInput ? `Live preview: ${domainInput}` : 'Enter a domain to preview'}
-                      </div>
-                      {domainInput ? (
-                        <iframe
-                          key={`${domainInput}-${previewNonce}`}
-                          title="Brand live preview"
-                          src={`https://${domainInput}?preview=${previewNonce}`}
-                          className="h-[560px] w-full rounded-2xl border border-white/10 bg-slate-950"
-                          sandbox="allow-same-origin allow-scripts allow-forms"
-                        />
-                      ) : (
-                        <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/40 p-6 text-xs text-white/50">
-                          Add a domain above to show the live site preview here.
+                    <div
+                      className="mt-3 rounded-3xl border border-white/10 bg-white/5 p-6"
+                      style={{
+                        '--brand-bg-base': brandingDraft.theme?.background?.base || '#0b1020',
+                        '--brand-bg-top': brandingDraft.theme?.background?.radialTop || 'rgba(59,130,246,0.35)',
+                        '--brand-bg-bottom': brandingDraft.theme?.background?.radialBottom || 'rgba(139,92,246,0.35)',
+                        '--brand-text-primary': brandingDraft.theme?.text?.primary || '#e5e7eb',
+                        '--brand-text-muted': brandingDraft.theme?.text?.muted || 'rgba(229,231,235,0.7)',
+                        '--brand-gradient-start': brandingDraft.theme?.text?.headlineGradient?.[0] || '#3b82f6',
+                        '--brand-gradient-end': brandingDraft.theme?.text?.headlineGradient?.[1] || '#8b5cf6',
+                        '--brand-card-bg': brandingDraft.theme?.card?.bg || 'rgba(255,255,255,0.12)',
+                        '--brand-card-border': brandingDraft.theme?.card?.border || 'rgba(255,255,255,0.2)',
+                        '--brand-btn-start': brandingDraft.theme?.button?.bgGradient?.[0] || '#3b82f6',
+                        '--brand-btn-end': brandingDraft.theme?.button?.bgGradient?.[1] || '#8b5cf6',
+                        '--brand-btn-text': brandingDraft.theme?.button?.text || '#ffffff',
+                        background:
+                          'radial-gradient(circle at top, var(--brand-bg-top), transparent 55%), radial-gradient(circle at bottom, var(--brand-bg-bottom), transparent 55%), var(--brand-bg-base)',
+                        color: 'var(--brand-text-primary)'
+                      } as Record<string, string>}
+                    >
+                      <div className="flex items-center gap-3">
+                        {brandingDraft.brand?.logoUrl && (
+                          <img
+                            src={brandingDraft.brand?.logoUrl}
+                            alt="Brand logo preview"
+                            className="h-10 w-10 rounded-full border border-white/10 bg-white/10"
+                          />
+                        )}
+                        <div className="text-xs uppercase tracking-[0.3em] text-white/70">
+                          {renderEditableCopy(
+                            'badge',
+                            brandingDraft.copy?.badge,
+                            'Brand badge',
+                            ''
+                          )}
                         </div>
-                      )}
+                      </div>
+                      <h3
+                        className="mt-4 text-2xl font-semibold"
+                        style={{
+                          background: 'linear-gradient(90deg, var(--brand-gradient-start), var(--brand-gradient-end))',
+                          WebkitBackgroundClip: 'text',
+                          color: 'transparent'
+                        }}
+                      >
+                        {renderEditableCopy(
+                          'headline',
+                          brandingDraft.copy?.headline,
+                          'Brand headline',
+                          ''
+                        )}
+                      </h3>
+                      <p className="mt-2 text-sm" style={{ color: 'var(--brand-text-muted)' }}>
+                        {renderEditableCopy(
+                          'subheadline',
+                          brandingDraft.copy?.subheadline,
+                          'Subheadline preview text.',
+                          ''
+                        )}
+                      </p>
+                      <div
+                        className="mt-4 rounded-2xl border p-4"
+                        style={{
+                          background: 'var(--brand-card-bg)',
+                          borderColor: 'var(--brand-card-border)'
+                        }}
+                      >
+                        <p className="text-xs font-semibold text-white/80">
+                          {renderEditableCopy(
+                            'emailLabel',
+                            brandingDraft.copy?.emailLabel,
+                            'Enter your email to get a magic link',
+                            ''
+                          )}
+                        </p>
+                        <div className="mt-3 rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-xs text-white/60">
+                          {renderEditableCopy(
+                            'emailPlaceholder',
+                            brandingDraft.copy?.emailPlaceholder,
+                            'Enter your email address',
+                            ''
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="mt-3 rounded-xl px-4 py-2 text-xs font-semibold"
+                          style={{
+                            background: 'linear-gradient(90deg, var(--brand-btn-start), var(--brand-btn-end))',
+                            color: 'var(--brand-btn-text)'
+                          }}
+                        >
+                          {renderEditableCopy(
+                            'cta',
+                            brandingDraft.copy?.cta,
+                            'Send magic link',
+                            ''
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
