@@ -63,6 +63,7 @@ function App() {
   const [brandingJson, setBrandingJson] = useState('');
   const [brandingJsonError, setBrandingJsonError] = useState('');
   const [previewBranding, setPreviewBranding] = useState<BrandingPreview | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [aiBrandName, setAiBrandName] = useState('');
   const [aiAudience, setAiAudience] = useState('');
   const [aiNotes, setAiNotes] = useState('');
@@ -92,15 +93,18 @@ function App() {
     if (!brandingJson.trim()) {
       setBrandingJsonError('');
       setPreviewBranding(null);
+      setPreviewOpen(false);
       return;
     }
     try {
       const parsed = JSON.parse(brandingJson) as BrandingPreview;
       setPreviewBranding(parsed);
       setBrandingJsonError('');
+      setPreviewOpen(true);
     } catch {
       setPreviewBranding(null);
       setBrandingJsonError('Branding JSON must be valid JSON.');
+      setPreviewOpen(false);
     }
   }, [brandingJson]);
 
@@ -736,78 +740,103 @@ function App() {
                 >
                   {aiLoading ? 'Generating…' : 'Generate with AI'}
                 </button>
+                {previewBranding && !previewOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen(true)}
+                    className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/80 hover:border-white/30"
+                  >
+                    Open preview
+                  </button>
+                )}
                 {aiStatus && <span className="text-xs text-emerald-300">{aiStatus}</span>}
                 {aiError && <span className="text-xs text-rose-300">{aiError}</span>}
               </div>
               {brandingJsonError && (
                 <p className="mt-2 text-xs text-rose-300">{brandingJsonError}</p>
               )}
-              {previewBranding && (
-                <div
-                  className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-6"
-                  style={{
-                    '--brand-bg-base': previewBranding.theme?.background?.base || '#0b1020',
-                    '--brand-bg-top': previewBranding.theme?.background?.radialTop || 'rgba(59,130,246,0.35)',
-                    '--brand-bg-bottom': previewBranding.theme?.background?.radialBottom || 'rgba(139,92,246,0.35)',
-                    '--brand-text-primary': previewBranding.theme?.text?.primary || '#e5e7eb',
-                    '--brand-text-muted': previewBranding.theme?.text?.muted || 'rgba(229,231,235,0.7)',
-                    '--brand-gradient-start': previewBranding.theme?.text?.headlineGradient?.[0] || '#3b82f6',
-                    '--brand-gradient-end': previewBranding.theme?.text?.headlineGradient?.[1] || '#8b5cf6',
-                    '--brand-card-bg': previewBranding.theme?.card?.bg || 'rgba(255,255,255,0.12)',
-                    '--brand-card-border': previewBranding.theme?.card?.border || 'rgba(255,255,255,0.2)',
-                    '--brand-btn-start': previewBranding.theme?.button?.bgGradient?.[0] || '#3b82f6',
-                    '--brand-btn-end': previewBranding.theme?.button?.bgGradient?.[1] || '#8b5cf6',
-                    '--brand-btn-text': previewBranding.theme?.button?.text || '#ffffff',
-                    background:
-                      'radial-gradient(circle at top, var(--brand-bg-top), transparent 55%), radial-gradient(circle at bottom, var(--brand-bg-bottom), transparent 55%), var(--brand-bg-base)',
-                    color: 'var(--brand-text-primary)'
-                  } as Record<string, string>}
-                >
-                  <div className="flex items-center gap-3">
-                    {previewBranding.brand?.logoUrl && (
-                      <img
-                        src={previewBranding.brand?.logoUrl}
-                        alt="Brand logo preview"
-                        className="h-10 w-10 rounded-full border border-white/10 bg-white/10"
-                      />
-                    )}
-                    <div className="text-xs uppercase tracking-[0.3em] text-white/70">
-                      {previewBranding.copy?.badge || 'Brand badge'}
+              {previewBranding && previewOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-6">
+                  <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-slate-900/90 p-6 shadow-2xl backdrop-blur">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs uppercase tracking-[0.3em] text-white/60">
+                        Branding preview
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewOpen(false)}
+                        className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 hover:border-white/30"
+                      >
+                        Close
+                      </button>
                     </div>
-                  </div>
-                  <h3
-                    className="mt-4 text-2xl font-semibold"
-                    style={{
-                      background: 'linear-gradient(90deg, var(--brand-gradient-start), var(--brand-gradient-end))',
-                      WebkitBackgroundClip: 'text',
-                      color: 'transparent'
-                    }}
-                  >
-                    {previewBranding.copy?.headline || 'Brand headline'}
-                  </h3>
-                  <p className="mt-2 text-sm" style={{ color: 'var(--brand-text-muted)' }}>
-                    {previewBranding.copy?.subheadline || 'Subheadline preview text.'}
-                  </p>
-                  <div
-                    className="mt-4 rounded-2xl border p-4"
-                    style={{
-                      background: 'var(--brand-card-bg)',
-                      borderColor: 'var(--brand-card-border)'
-                    }}
-                  >
-                    <p className="text-xs font-semibold text-white/80">
-                      {previewBranding.copy?.emailLabel || 'Enter your email to get a magic link'}
-                    </p>
-                    <button
-                      type="button"
-                      className="mt-3 rounded-xl px-4 py-2 text-xs font-semibold"
+                    <div
+                      className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-6"
                       style={{
-                        background: 'linear-gradient(90deg, var(--brand-btn-start), var(--brand-btn-end))',
-                        color: 'var(--brand-btn-text)'
-                      }}
+                        '--brand-bg-base': previewBranding.theme?.background?.base || '#0b1020',
+                        '--brand-bg-top': previewBranding.theme?.background?.radialTop || 'rgba(59,130,246,0.35)',
+                        '--brand-bg-bottom': previewBranding.theme?.background?.radialBottom || 'rgba(139,92,246,0.35)',
+                        '--brand-text-primary': previewBranding.theme?.text?.primary || '#e5e7eb',
+                        '--brand-text-muted': previewBranding.theme?.text?.muted || 'rgba(229,231,235,0.7)',
+                        '--brand-gradient-start': previewBranding.theme?.text?.headlineGradient?.[0] || '#3b82f6',
+                        '--brand-gradient-end': previewBranding.theme?.text?.headlineGradient?.[1] || '#8b5cf6',
+                        '--brand-card-bg': previewBranding.theme?.card?.bg || 'rgba(255,255,255,0.12)',
+                        '--brand-card-border': previewBranding.theme?.card?.border || 'rgba(255,255,255,0.2)',
+                        '--brand-btn-start': previewBranding.theme?.button?.bgGradient?.[0] || '#3b82f6',
+                        '--brand-btn-end': previewBranding.theme?.button?.bgGradient?.[1] || '#8b5cf6',
+                        '--brand-btn-text': previewBranding.theme?.button?.text || '#ffffff',
+                        background:
+                          'radial-gradient(circle at top, var(--brand-bg-top), transparent 55%), radial-gradient(circle at bottom, var(--brand-bg-bottom), transparent 55%), var(--brand-bg-base)',
+                        color: 'var(--brand-text-primary)'
+                      } as Record<string, string>}
                     >
-                      {previewBranding.copy?.cta || 'Send magic link'}
-                    </button>
+                      <div className="flex items-center gap-3">
+                        {previewBranding.brand?.logoUrl && (
+                          <img
+                            src={previewBranding.brand?.logoUrl}
+                            alt="Brand logo preview"
+                            className="h-10 w-10 rounded-full border border-white/10 bg-white/10"
+                          />
+                        )}
+                        <div className="text-xs uppercase tracking-[0.3em] text-white/70">
+                          {previewBranding.copy?.badge || 'Brand badge'}
+                        </div>
+                      </div>
+                      <h3
+                        className="mt-4 text-2xl font-semibold"
+                        style={{
+                          background: 'linear-gradient(90deg, var(--brand-gradient-start), var(--brand-gradient-end))',
+                          WebkitBackgroundClip: 'text',
+                          color: 'transparent'
+                        }}
+                      >
+                        {previewBranding.copy?.headline || 'Brand headline'}
+                      </h3>
+                      <p className="mt-2 text-sm" style={{ color: 'var(--brand-text-muted)' }}>
+                        {previewBranding.copy?.subheadline || 'Subheadline preview text.'}
+                      </p>
+                      <div
+                        className="mt-4 rounded-2xl border p-4"
+                        style={{
+                          background: 'var(--brand-card-bg)',
+                          borderColor: 'var(--brand-card-border)'
+                        }}
+                      >
+                        <p className="text-xs font-semibold text-white/80">
+                          {previewBranding.copy?.emailLabel || 'Enter your email to get a magic link'}
+                        </p>
+                        <button
+                          type="button"
+                          className="mt-3 rounded-xl px-4 py-2 text-xs font-semibold"
+                          style={{
+                            background: 'linear-gradient(90deg, var(--brand-btn-start), var(--brand-btn-end))',
+                            color: 'var(--brand-btn-text)'
+                          }}
+                        >
+                          {previewBranding.copy?.cta || 'Send magic link'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
