@@ -1,16 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AuthBar, EcosystemNav, LanguageSelector } from 'vegvisr-ui-kit';
-import { Button as SpotlightButton } from './spotlight/Button';
-import { Card as SpotlightCard } from './spotlight/Card';
-import { Container as SpotlightContainer } from './spotlight/Container';
-import { Section as SpotlightSection } from './spotlight/Section';
-import { cx } from './spotlight/cx';
 import appLogo from './assets/app-logo.png';
-import photo1 from './assets/spotlight/image-1.jpg';
-import photo2 from './assets/spotlight/image-2.jpg';
-import photo3 from './assets/spotlight/image-3.jpg';
-import photo4 from './assets/spotlight/image-4.jpg';
-import photo5 from './assets/spotlight/image-5.jpg';
 import { LanguageContext } from './lib/LanguageContext';
 import { readStoredUser, type AuthUser } from './lib/auth';
 import { getStoredLanguage, setStoredLanguage } from './lib/storage';
@@ -68,33 +58,6 @@ type BrandingPreview = {
     showLanguageToggle?: boolean;
   };
 };
-
-const spotlightPhotos = [photo1, photo2, photo3, photo4, photo5];
-const spotlightRotations = ['rotate-2', '-rotate-2', 'rotate-2', 'rotate-2', '-rotate-2'];
-
-const SpotlightPhotos = () => (
-  <div className="mt-12 sm:mt-16">
-    <div className="-my-4 flex justify-center gap-5 overflow-hidden py-4 sm:gap-8">
-      {spotlightPhotos.map((image, index) => (
-        <div
-          key={image}
-          className={cx(
-            'relative w-44 flex-none overflow-hidden rounded-xl bg-white/5 sm:w-72 sm:rounded-2xl',
-            spotlightRotations[index % spotlightRotations.length]
-          )}
-        >
-          <div className="aspect-[9/10]">
-            <img
-              src={image}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
 
 function App() {
   const [language, setLanguageState] = useState(getStoredLanguage());
@@ -949,29 +912,27 @@ function App() {
     <LanguageContext.Provider value={contextValue}>
       <div className="min-h-screen bg-slate-950 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.25),_transparent_55%),radial-gradient(circle_at_bottom,_rgba(139,92,246,0.25),_transparent_55%)]" />
-        <div className="relative flex min-h-screen w-full flex-col py-12">
-          <SpotlightContainer>
-            <header className="flex flex-wrap items-center justify-between gap-4">
-              <img
-                src={brandLogo || appLogo}
-                alt={t('app.title')}
-                className="h-12 w-auto"
+        <div className="relative flex min-h-screen w-full flex-col px-6 py-12">
+          <header className="flex flex-wrap items-center justify-between gap-4">
+            <img
+              src={brandLogo || appLogo}
+              alt={t('app.title')}
+              className="h-12 w-auto"
+            />
+            <div className="flex items-center gap-3">
+              <LanguageSelector value={language} onChange={setLanguage} />
+              <AuthBar
+                userEmail={authStatus === 'authed' ? authUser?.email : undefined}
+                badgeLabel={t('app.badge')}
+                signInLabel="Sign in"
+                onSignIn={() => setLoginOpen((prev) => !prev)}
+                logoutLabel="Log out"
+                onLogout={handleLogout}
               />
-              <div className="flex items-center gap-3">
-                <LanguageSelector value={language} onChange={setLanguage} />
-                <AuthBar
-                  userEmail={authStatus === 'authed' ? authUser?.email : undefined}
-                  badgeLabel={t('app.badge')}
-                  signInLabel="Sign in"
-                  onSignIn={() => setLoginOpen((prev) => !prev)}
-                  logoutLabel="Log out"
-                  onLogout={handleLogout}
-                />
-              </div>
-            </header>
+            </div>
+          </header>
 
-            <EcosystemNav className="mt-4" />
-          </SpotlightContainer>
+          <EcosystemNav className="mt-4" />
 
           {authStatus === 'anonymous' && loginOpen && (
             <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-white/80">
@@ -1016,64 +977,34 @@ function App() {
           )}
 
           <main className="mt-16">
-            <SpotlightContainer>
-              <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-                <div className="max-w-2xl">
-                  <p className="text-xs uppercase tracking-[0.4em] text-white/60">
-                    Vegvisr Momentum
-                  </p>
-                  <h1 className="mt-4 text-4xl font-bold tracking-tight text-white sm:text-5xl">
-                    Branding control for every domain, every app.
-                  </h1>
-                  <p className="mt-6 text-base text-white/70">
-                    Use the Spotlight-style editor to manage custom domains, live previews, and
-                    on-brand copy. Keep all apps in sync while giving each customer their own
-                    identity.
-                  </p>
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <SpotlightButton variant="primary" href="#domain-panel">
-                      Open domain editor
-                    </SpotlightButton>
-                    <SpotlightButton variant="secondary" href="#domain-panel">
-                      Manage branding
-                    </SpotlightButton>
-                  </div>
+            <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
+              <h1 className="text-3xl font-semibold text-white">{t('app.title')}</h1>
+              <p className="mt-3 text-sm text-white/70">
+                Starter shell. Replace this section with your app content.
+              </p>
+              {brandApp && (
+                <p className="mt-2 text-xs text-white/50">
+                  Brand target app: {brandApp}
+                </p>
+              )}
+              {brandSlogan && (
+                <p className="mt-1 text-sm text-white/70">
+                  {brandSlogan}
+                </p>
+              )}
+              <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/50 px-6 py-5 text-sm text-white/70">
+                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+                  Starter Notes
                 </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                  <div className="text-xs uppercase tracking-[0.3em] text-white/50">
-                    Workspace status
-                  </div>
-                  <div className="mt-4 space-y-4">
-                    <div className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-4">
-                      <div className="text-xs text-white/50">Domains tracked</div>
-                      <div className="mt-2 text-3xl font-semibold text-white">
-                        {domainList.length}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-4 text-sm text-white/70">
-                      <div className="text-xs uppercase tracking-[0.3em] text-white/50">
-                        Active brand
-                      </div>
-                      <div className="mt-2 text-base text-white">
-                        {brandApp ? `${brandApp} · ${brandSlogan || 'No slogan yet'}` : 'No domain selected'}
-                      </div>
-                    </div>
-                    <SpotlightCard className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-4">
-                      <SpotlightCard.Title>Live preview</SpotlightCard.Title>
-                      <SpotlightCard.Description>
-                        Use the preview panel to validate branding instantly before saving.
-                      </SpotlightCard.Description>
-                    </SpotlightCard>
-                  </div>
-                </div>
+                <ul className="mt-3 list-disc space-y-2 pl-5">
+                  <li>Auth + magic link flow is wired.</li>
+                  <li>Language selector and ecosystem nav are ready.</li>
+                  <li>Replace logo + icon assets for your app.</li>
+                </ul>
               </div>
-            </SpotlightContainer>
+            </section>
 
-            <SpotlightPhotos />
-
-            <SpotlightContainer className="mt-16" id="domain-panel">
-              <SpotlightSection title="Custom domain panel">
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
+            <section className="mt-10 rounded-3xl border border-white/10 bg-white/5 p-8">
               <h2 className="text-2xl font-semibold text-white">Custom Domain Panel</h2>
               <p className="mt-2 text-sm text-white/70">
                 Add a custom domain and point it to the correct app. This uses the Cloudflare API
@@ -1440,9 +1371,7 @@ function App() {
                   </div>
                 )}
               </div>
-                </section>
-              </SpotlightSection>
-            </SpotlightContainer>
+            </section>
           </main>
         </div>
       </div>
