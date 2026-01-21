@@ -25,9 +25,7 @@ type BrandingPreview = {
   };
   theme?: {
     background?: {
-      base?: string;
-      radialTop?: string;
-      radialBottom?: string;
+      points?: Array<{ id: string; x: number; y: number; color: string }>;
     };
     text?: {
       primary?: string;
@@ -91,6 +89,7 @@ function App() {
   const [isResizing, setIsResizing] = useState(false);
   const splitRef = useRef<HTMLDivElement | null>(null);
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   const [aiBrandName, setAiBrandName] = useState('');
   const [aiAudience, setAiAudience] = useState('');
   const [aiNotes, setAiNotes] = useState('');
@@ -289,27 +288,6 @@ function App() {
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <input
           type="text"
-          value={brandingDraft.theme?.background?.base || ''}
-          onChange={(event) => updateBrandingDraft({ theme: { background: { base: event.target.value } } })}
-          placeholder="Background base"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
-          value={brandingDraft.theme?.background?.radialTop || ''}
-          onChange={(event) => updateBrandingDraft({ theme: { background: { radialTop: event.target.value } } })}
-          placeholder="Background radial top"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
-          value={brandingDraft.theme?.background?.radialBottom || ''}
-          onChange={(event) => updateBrandingDraft({ theme: { background: { radialBottom: event.target.value } } })}
-          placeholder="Background radial bottom"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
           value={brandingDraft.theme?.text?.primary || ''}
           onChange={(event) => updateBrandingDraft({ theme: { text: { primary: event.target.value } } })}
           placeholder="Text primary"
@@ -499,6 +477,24 @@ function App() {
         {value || placeholder}
       </span>
     );
+  };
+
+  const ensureBackgroundPoints = (points?: Array<{ id: string; x: number; y: number; color: string }>) => {
+    if (points && points.length >= 5) return points;
+    return [
+      { id: 'tl', x: 10, y: 10, color: '#1d4ed8' },
+      { id: 'tr', x: 90, y: 10, color: '#0f172a' },
+      { id: 'bl', x: 10, y: 90, color: '#e0f2fe' },
+      { id: 'br', x: 90, y: 90, color: '#2563eb' },
+      { id: 'c', x: 50, y: 50, color: '#60a5fa' }
+    ];
+  };
+
+  const updatePoint = (id: string, next: Partial<{ x: number; y: number; color: string }>) => {
+    const points = ensureBackgroundPoints(brandingDraft.theme?.background?.points).map((point) =>
+      point.id === id ? { ...point, ...next } : point
+    );
+    updateBrandingDraft({ theme: { background: { points } } });
   };
 
   useEffect(() => {
@@ -1114,9 +1110,6 @@ function App() {
                     <div
                       className="mt-3 rounded-3xl border border-white/10 bg-white/5 p-6"
                       style={{
-                        '--brand-bg-base': brandingDraft.theme?.background?.base || '#0b1020',
-                        '--brand-bg-top': brandingDraft.theme?.background?.radialTop || 'rgba(59,130,246,0.35)',
-                        '--brand-bg-bottom': brandingDraft.theme?.background?.radialBottom || 'rgba(139,92,246,0.35)',
                         '--brand-text-primary': brandingDraft.theme?.text?.primary || '#e5e7eb',
                         '--brand-text-muted': brandingDraft.theme?.text?.muted || 'rgba(229,231,235,0.7)',
                         '--brand-gradient-start': brandingDraft.theme?.text?.headlineGradient?.[0] || '#3b82f6',
@@ -1126,11 +1119,86 @@ function App() {
                         '--brand-btn-start': brandingDraft.theme?.button?.bgGradient?.[0] || '#3b82f6',
                         '--brand-btn-end': brandingDraft.theme?.button?.bgGradient?.[1] || '#8b5cf6',
                         '--brand-btn-text': brandingDraft.theme?.button?.text || '#ffffff',
-                        background:
-                          'radial-gradient(circle at top, var(--brand-bg-top), transparent 55%), radial-gradient(circle at bottom, var(--brand-bg-bottom), transparent 55%), var(--brand-bg-base)',
+                        background: ensureBackgroundPoints(brandingDraft.theme?.background?.points)
+                          .map(
+                            (point) =>
+                              `radial-gradient(circle at ${point.x}% ${point.y}%, ${point.color} 0%, transparent 60%)`
+                          )
+                          .join(', '),
                         color: 'var(--brand-text-primary)'
                       } as Record<string, string>}
                     >
+                      <div className="relative mb-6 h-36 w-full rounded-2xl border border-white/10 bg-white/5">
+                        {ensureBackgroundPoints(brandingDraft.theme?.background?.points).map((point) => (
+                          <button
+                            key={point.id}
+                            type="button"
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              setSelectedPointId(point.id);
+                              const container = event.currentTarget.parentElement;
+                              if (!container) return;
+                              const onMove = (moveEvent: MouseEvent) => {
+                                const rect = container.getBoundingClientRect();
+                                const x = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+                                const y = ((moveEvent.clientY - rect.top) / rect.height) * 100;
+                                updatePoint(point.id, {
+                                  x: Math.min(100, Math.max(0, x)),
+                                  y: Math.min(100, Math.max(0, y))
+                                });
+                              };
+                              const onUp = () => {
+                                window.removeEventListener('mousemove', onMove);
+                                window.removeEventListener('mouseup', onUp);
+                              };
+                              window.addEventListener('mousemove', onMove);
+                              window.addEventListener('mouseup', onUp);
+                            }}
+                            className={`absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 shadow ${
+                              selectedPointId === point.id ? 'ring-2 ring-white' : 'ring-1 ring-white/30'
+                            }`}
+                            style={{
+                              left: `${point.x}%`,
+                              top: `${point.y}%`,
+                              backgroundColor: point.color
+                            }}
+                            aria-label={`Gradient point ${point.id}`}
+                          />
+                        ))}
+                        {selectedPointId && (
+                          <div className="absolute right-3 top-3 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-xs text-white/70">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-white/50">
+                              Gradient point
+                            </div>
+                            <div className="mt-2 flex items-center gap-2">
+                              <input
+                                type="color"
+                                value={
+                                  ensureBackgroundPoints(brandingDraft.theme?.background?.points).find(
+                                    (point) => point.id === selectedPointId
+                                  )?.color || '#3b82f6'
+                                }
+                                onChange={(event) =>
+                                  updatePoint(selectedPointId, { color: event.target.value })
+                                }
+                                className="h-6 w-8 cursor-pointer rounded-full border border-white/20 bg-transparent"
+                              />
+                              <input
+                                type="text"
+                                value={
+                                  ensureBackgroundPoints(brandingDraft.theme?.background?.points).find(
+                                    (point) => point.id === selectedPointId
+                                  )?.color || ''
+                                }
+                                onChange={(event) =>
+                                  updatePoint(selectedPointId, { color: event.target.value })
+                                }
+                                className="w-24 rounded-md border border-white/10 bg-slate-900/80 px-2 py-1 text-xs text-white/80"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div className="flex items-start gap-4">
                         <div
                           role="button"
