@@ -919,10 +919,17 @@ function App() {
               alt={t('app.title')}
               className="h-12 w-auto"
             />
-            <div className="flex items-center gap-3">
-              <LanguageSelector value={language} onChange={setLanguage} />
-              <AuthBar
-                userEmail={authStatus === 'authed' ? authUser?.email : undefined}
+              <div className="flex items-center gap-3">
+                {authStatus === 'authed' && authUser?.profileimage && (
+                  <img
+                    src={authUser.profileimage}
+                    alt="User avatar"
+                    className="h-9 w-9 rounded-full border border-white/20 object-cover"
+                  />
+                )}
+                <LanguageSelector value={language} onChange={setLanguage} />
+                <AuthBar
+                  userEmail={authStatus === 'authed' ? authUser?.email : undefined}
                 badgeLabel={t('app.badge')}
                 signInLabel="Sign in"
                 onSignIn={() => setLoginOpen((prev) => !prev)}
