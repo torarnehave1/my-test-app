@@ -285,115 +285,281 @@ function App() {
         />
       </div>
 
-      <div className="mt-5 text-xs uppercase tracking-[0.3em] text-white/60">Theme</div>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <input
-          type="text"
-          value={brandingDraft.theme?.text?.primary || ''}
-          onChange={(event) => updateBrandingDraft({ theme: { text: { primary: event.target.value } } })}
-          placeholder="Text primary"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
-          value={brandingDraft.theme?.text?.muted || ''}
-          onChange={(event) => updateBrandingDraft({ theme: { text: { muted: event.target.value } } })}
-          placeholder="Text muted"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
-          value={brandingDraft.theme?.text?.headlineGradient?.[0] || ''}
-          onChange={(event) =>
-            updateBrandingDraft({
-              theme: {
-                text: {
-                  headlineGradient: [
-                    event.target.value,
-                    brandingDraft.theme?.text?.headlineGradient?.[1] || ''
-                  ]
+      <div className="mt-5 text-xs uppercase tracking-[0.3em] text-white/60">Theme Colors</div>
+
+      <div className="mt-4 text-[10px] uppercase tracking-[0.2em] text-white/40">Text Colors</div>
+      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3">
+          <input
+            type="color"
+            value={brandingDraft.theme?.text?.primary || '#e5e7eb'}
+            onChange={(event) => updateBrandingDraft({ theme: { text: { primary: event.target.value } } })}
+            className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+            title="Primary text color"
+          />
+          <div className="flex-1">
+            <div className="text-[10px] text-white/50">Primary Text</div>
+            <input
+              type="text"
+              value={brandingDraft.theme?.text?.primary || ''}
+              onChange={(event) => updateBrandingDraft({ theme: { text: { primary: event.target.value } } })}
+              placeholder="#e5e7eb"
+              className="mt-1 w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3">
+          <input
+            type="color"
+            value={brandingDraft.theme?.text?.muted?.replace(/rgba?\([^)]+\)/, '#888888') || '#888888'}
+            onChange={(event) => updateBrandingDraft({ theme: { text: { muted: event.target.value } } })}
+            className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+            title="Muted text color"
+          />
+          <div className="flex-1">
+            <div className="text-[10px] text-white/50">Muted Text</div>
+            <input
+              type="text"
+              value={brandingDraft.theme?.text?.muted || ''}
+              onChange={(event) => updateBrandingDraft({ theme: { text: { muted: event.target.value } } })}
+              placeholder="rgba(229,231,235,0.7)"
+              className="mt-1 w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 text-[10px] uppercase tracking-[0.2em] text-white/40">Headline Gradient</div>
+      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3">
+          <input
+            type="color"
+            value={brandingDraft.theme?.text?.headlineGradient?.[0] || '#3b82f6'}
+            onChange={(event) =>
+              updateBrandingDraft({
+                theme: {
+                  text: {
+                    headlineGradient: [
+                      event.target.value,
+                      brandingDraft.theme?.text?.headlineGradient?.[1] || '#8b5cf6'
+                    ]
+                  }
                 }
+              })
+            }
+            className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+            title="Headline gradient start"
+          />
+          <div className="flex-1">
+            <div className="text-[10px] text-white/50">Gradient Start</div>
+            <input
+              type="text"
+              value={brandingDraft.theme?.text?.headlineGradient?.[0] || ''}
+              onChange={(event) =>
+                updateBrandingDraft({
+                  theme: {
+                    text: {
+                      headlineGradient: [
+                        event.target.value,
+                        brandingDraft.theme?.text?.headlineGradient?.[1] || ''
+                      ]
+                    }
+                  }
+                })
               }
-            })
-          }
-          placeholder="Headline gradient start"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
-          value={brandingDraft.theme?.text?.headlineGradient?.[1] || ''}
-          onChange={(event) =>
-            updateBrandingDraft({
-              theme: {
-                text: {
-                  headlineGradient: [
-                    brandingDraft.theme?.text?.headlineGradient?.[0] || '',
-                    event.target.value
-                  ]
+              placeholder="#3b82f6"
+              className="mt-1 w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3">
+          <input
+            type="color"
+            value={brandingDraft.theme?.text?.headlineGradient?.[1] || '#8b5cf6'}
+            onChange={(event) =>
+              updateBrandingDraft({
+                theme: {
+                  text: {
+                    headlineGradient: [
+                      brandingDraft.theme?.text?.headlineGradient?.[0] || '#3b82f6',
+                      event.target.value
+                    ]
+                  }
                 }
+              })
+            }
+            className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+            title="Headline gradient end"
+          />
+          <div className="flex-1">
+            <div className="text-[10px] text-white/50">Gradient End</div>
+            <input
+              type="text"
+              value={brandingDraft.theme?.text?.headlineGradient?.[1] || ''}
+              onChange={(event) =>
+                updateBrandingDraft({
+                  theme: {
+                    text: {
+                      headlineGradient: [
+                        brandingDraft.theme?.text?.headlineGradient?.[0] || '',
+                        event.target.value
+                      ]
+                    }
+                  }
+                })
               }
-            })
-          }
-          placeholder="Headline gradient end"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
-          value={brandingDraft.theme?.card?.bg || ''}
-          onChange={(event) => updateBrandingDraft({ theme: { card: { bg: event.target.value } } })}
-          placeholder="Card background"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
-          value={brandingDraft.theme?.card?.border || ''}
-          onChange={(event) => updateBrandingDraft({ theme: { card: { border: event.target.value } } })}
-          placeholder="Card border"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
-          value={brandingDraft.theme?.button?.bgGradient?.[0] || ''}
-          onChange={(event) =>
-            updateBrandingDraft({
-              theme: {
-                button: {
-                  bgGradient: [
-                    event.target.value,
-                    brandingDraft.theme?.button?.bgGradient?.[1] || ''
-                  ]
+              placeholder="#8b5cf6"
+              className="mt-1 w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 text-[10px] uppercase tracking-[0.2em] text-white/40">Card Styling</div>
+      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3">
+          <input
+            type="color"
+            value={brandingDraft.theme?.card?.bg?.replace(/rgba?\([^)]+\)/, '#1e1e1e') || '#1e1e1e'}
+            onChange={(event) => updateBrandingDraft({ theme: { card: { bg: event.target.value } } })}
+            className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+            title="Card background"
+          />
+          <div className="flex-1">
+            <div className="text-[10px] text-white/50">Card Background</div>
+            <input
+              type="text"
+              value={brandingDraft.theme?.card?.bg || ''}
+              onChange={(event) => updateBrandingDraft({ theme: { card: { bg: event.target.value } } })}
+              placeholder="rgba(255,255,255,0.12)"
+              className="mt-1 w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3">
+          <input
+            type="color"
+            value={brandingDraft.theme?.card?.border?.replace(/rgba?\([^)]+\)/, '#333333') || '#333333'}
+            onChange={(event) => updateBrandingDraft({ theme: { card: { border: event.target.value } } })}
+            className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+            title="Card border"
+          />
+          <div className="flex-1">
+            <div className="text-[10px] text-white/50">Card Border</div>
+            <input
+              type="text"
+              value={brandingDraft.theme?.card?.border || ''}
+              onChange={(event) => updateBrandingDraft({ theme: { card: { border: event.target.value } } })}
+              placeholder="rgba(255,255,255,0.2)"
+              className="mt-1 w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 text-[10px] uppercase tracking-[0.2em] text-white/40">Button Styling</div>
+      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3">
+          <input
+            type="color"
+            value={brandingDraft.theme?.button?.bgGradient?.[0] || '#3b82f6'}
+            onChange={(event) =>
+              updateBrandingDraft({
+                theme: {
+                  button: {
+                    bgGradient: [
+                      event.target.value,
+                      brandingDraft.theme?.button?.bgGradient?.[1] || '#8b5cf6'
+                    ]
+                  }
                 }
+              })
+            }
+            className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+            title="Button gradient start"
+          />
+          <div className="flex-1">
+            <div className="text-[10px] text-white/50">Button Gradient Start</div>
+            <input
+              type="text"
+              value={brandingDraft.theme?.button?.bgGradient?.[0] || ''}
+              onChange={(event) =>
+                updateBrandingDraft({
+                  theme: {
+                    button: {
+                      bgGradient: [
+                        event.target.value,
+                        brandingDraft.theme?.button?.bgGradient?.[1] || ''
+                      ]
+                    }
+                  }
+                })
               }
-            })
-          }
-          placeholder="Button gradient start"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
-          value={brandingDraft.theme?.button?.bgGradient?.[1] || ''}
-          onChange={(event) =>
-            updateBrandingDraft({
-              theme: {
-                button: {
-                  bgGradient: [
-                    brandingDraft.theme?.button?.bgGradient?.[0] || '',
-                    event.target.value
-                  ]
+              placeholder="#3b82f6"
+              className="mt-1 w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3">
+          <input
+            type="color"
+            value={brandingDraft.theme?.button?.bgGradient?.[1] || '#8b5cf6'}
+            onChange={(event) =>
+              updateBrandingDraft({
+                theme: {
+                  button: {
+                    bgGradient: [
+                      brandingDraft.theme?.button?.bgGradient?.[0] || '#3b82f6',
+                      event.target.value
+                    ]
+                  }
                 }
+              })
+            }
+            className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+            title="Button gradient end"
+          />
+          <div className="flex-1">
+            <div className="text-[10px] text-white/50">Button Gradient End</div>
+            <input
+              type="text"
+              value={brandingDraft.theme?.button?.bgGradient?.[1] || ''}
+              onChange={(event) =>
+                updateBrandingDraft({
+                  theme: {
+                    button: {
+                      bgGradient: [
+                        brandingDraft.theme?.button?.bgGradient?.[0] || '',
+                        event.target.value
+                      ]
+                    }
+                  }
+                })
               }
-            })
-          }
-          placeholder="Button gradient end"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
-        <input
-          type="text"
-          value={brandingDraft.theme?.button?.text || ''}
-          onChange={(event) => updateBrandingDraft({ theme: { button: { text: event.target.value } } })}
-          placeholder="Button text color"
-          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-        />
+              placeholder="#8b5cf6"
+              className="mt-1 w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3">
+          <input
+            type="color"
+            value={brandingDraft.theme?.button?.text || '#ffffff'}
+            onChange={(event) => updateBrandingDraft({ theme: { button: { text: event.target.value } } })}
+            className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+            title="Button text color"
+          />
+          <div className="flex-1">
+            <div className="text-[10px] text-white/50">Button Text Color</div>
+            <input
+              type="text"
+              value={brandingDraft.theme?.button?.text || ''}
+              onChange={(event) => updateBrandingDraft({ theme: { button: { text: event.target.value } } })}
+              placeholder="#ffffff"
+              className="mt-1 w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
