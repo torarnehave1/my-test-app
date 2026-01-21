@@ -460,6 +460,47 @@ function App() {
     );
   };
 
+  const renderEditableBrand = (
+    key: keyof NonNullable<BrandingPreview['brand']>,
+    value: string | undefined,
+    placeholder: string,
+    className: string,
+    inputClassName?: string
+  ) => {
+    const fieldKey = `brand.${key}`;
+    if (editingKey === fieldKey) {
+      return (
+        <input
+          value={value || ''}
+          onChange={(event) => updateBrandingDraft({ brand: { [key]: event.target.value } })}
+          onBlur={() => setEditingKey(null)}
+          autoFocus
+          placeholder={placeholder}
+          className={cx(
+            'w-full rounded-lg border border-white/20 bg-white/10 px-2 py-1 text-sm text-white outline-none',
+            inputClassName
+          )}
+        />
+      );
+    }
+
+    return (
+      <span
+        role="button"
+        tabIndex={0}
+        onClick={() => setEditingKey(fieldKey)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            setEditingKey(fieldKey);
+          }
+        }}
+        className={cx('cursor-text text-white/90 hover:text-white', className)}
+      >
+        {value || placeholder}
+      </span>
+    );
+  };
+
   useEffect(() => {
     if (!brandingJson.trim()) {
       setBrandingJsonError('');
@@ -1090,21 +1131,62 @@ function App() {
                         color: 'var(--brand-text-primary)'
                       } as Record<string, string>}
                     >
-                      <div className="flex items-center gap-3">
-                        {brandingDraft.brand?.logoUrl && (
-                          <img
-                            src={brandingDraft.brand?.logoUrl}
-                            alt="Brand logo preview"
-                            className="h-10 w-10 rounded-full border border-white/10 bg-white/10"
-                          />
-                        )}
-                        <div className="text-xs uppercase tracking-[0.3em] text-white/70">
-                          {renderEditableCopy(
-                            'badge',
-                            brandingDraft.copy?.badge,
-                            'Brand badge',
-                            ''
+                      <div className="flex items-start gap-4">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setEditingKey('brand.logoUrl')}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              setEditingKey('brand.logoUrl');
+                            }
+                          }}
+                          className="h-12 w-12 rounded-full border border-white/10 bg-white/10 text-[10px] text-white/60 flex items-center justify-center overflow-hidden"
+                        >
+                          {editingKey === 'brand.logoUrl' ? (
+                            <input
+                              value={brandingDraft.brand?.logoUrl || ''}
+                              onChange={(event) => updateBrandingDraft({ brand: { logoUrl: event.target.value } })}
+                              onBlur={() => setEditingKey(null)}
+                              autoFocus
+                              placeholder="Logo URL"
+                              className="w-full h-full bg-transparent text-[10px] text-white/80 outline-none px-1"
+                            />
+                          ) : brandingDraft.brand?.logoUrl ? (
+                            <img
+                              src={brandingDraft.brand?.logoUrl}
+                              alt="Brand logo preview"
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            'Logo'
                           )}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-white">
+                            {renderEditableBrand(
+                              'name',
+                              brandingDraft.brand?.name,
+                              'Brand name',
+                              ''
+                            )}
+                          </div>
+                          <div className="mt-1 text-xs text-white/60">
+                            {renderEditableBrand(
+                              'slogan',
+                              brandingDraft.brand?.slogan,
+                              'Brand slogan',
+                              ''
+                            )}
+                          </div>
+                          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/70">
+                            {renderEditableCopy(
+                              'badge',
+                              brandingDraft.copy?.badge,
+                              'Brand badge',
+                              ''
+                            )}
+                          </div>
                         </div>
                       </div>
                       <h3
