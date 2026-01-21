@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AuthBar, EcosystemNav, LanguageSelector } from 'vegvisr-ui-kit';
 import appLogo from './assets/app-logo.png';
 import { LanguageContext } from './lib/LanguageContext';
@@ -63,7 +63,9 @@ function App() {
   const [brandingJson, setBrandingJson] = useState('');
   const [brandingJsonError, setBrandingJsonError] = useState('');
   const [previewBranding, setPreviewBranding] = useState<BrandingPreview | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [splitRatio, setSplitRatio] = useState(50);
+  const [isResizing, setIsResizing] = useState(false);
+  const splitRef = useRef<HTMLDivElement | null>(null);
   const [aiBrandName, setAiBrandName] = useState('');
   const [aiAudience, setAiAudience] = useState('');
   const [aiNotes, setAiNotes] = useState('');
@@ -93,20 +95,36 @@ function App() {
     if (!brandingJson.trim()) {
       setBrandingJsonError('');
       setPreviewBranding(null);
-      setPreviewOpen(false);
       return;
     }
     try {
       const parsed = JSON.parse(brandingJson) as BrandingPreview;
       setPreviewBranding(parsed);
       setBrandingJsonError('');
-      setPreviewOpen(true);
     } catch {
       setPreviewBranding(null);
       setBrandingJsonError('Branding JSON must be valid JSON.');
-      setPreviewOpen(false);
     }
   }, [brandingJson]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const handleMove = (event: MouseEvent) => {
+      if (!splitRef.current) return;
+      const bounds = splitRef.current.getBoundingClientRect();
+      if (!bounds.width) return;
+      const next = ((event.clientX - bounds.left) / bounds.width) * 100;
+      const clamped = Math.min(70, Math.max(30, next));
+      setSplitRatio(clamped);
+    };
+    const handleUp = () => setIsResizing(false);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [isResizing]);
 
   const setLanguage = (value: typeof language) => {
     setLanguageState(value);
@@ -647,131 +665,17 @@ function App() {
                 on your account.
               </p>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-[1.4fr_1fr]">
-                <input
-                  type="text"
-                  value={domainInput}
-                  onChange={(event) => setDomainInput(event.target.value)}
-                  placeholder="connect.universi.no"
-                  className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                />
-                <select
-                  value={targetApp}
-                  onChange={(event) => setTargetApp(event.target.value)}
-                  className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                >
-                  <option value="aichat">aichat</option>
-                  <option value="connect">connect</option>
-                  <option value="photos">photos</option>
-                </select>
-              </div>
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                <input
-                  type="text"
-                  value={logoUrl}
-                  onChange={(event) => setLogoUrl(event.target.value)}
-                  placeholder="https://example.com/logo.png"
-                  className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                />
-                <input
-                  type="text"
-                  value={slogan}
-                  onChange={(event) => setSlogan(event.target.value)}
-                  placeholder="Brand slogan"
-                  className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddDomain}
-                  disabled={domainLoading}
-                  className="rounded-2xl bg-gradient-to-r from-sky-500 to-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/30"
-                >
-                  {domainLoading ? 'Saving...' : isEditing ? 'Save changes' : 'Add domain'}
-                </button>
-              </div>
-              <textarea
-                value={brandingJson}
-                onChange={(event) => setBrandingJson(event.target.value)}
-                placeholder="Branding JSON (optional)"
-                rows={4}
-                className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-              />
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <input
-                  type="text"
-                  value={aiBrandName}
-                  onChange={(event) => setAiBrandName(event.target.value)}
-                  placeholder="Brand name for AI (optional)"
-                  className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                />
-                <input
-                  type="text"
-                  value={aiAudience}
-                  onChange={(event) => setAiAudience(event.target.value)}
-                  placeholder="Audience (optional)"
-                  className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                />
-                <input
-                  type="text"
-                  value={aiNotes}
-                  onChange={(event) => setAiNotes(event.target.value)}
-                  placeholder="AI prompt (style, tone, colors)"
-                  className="sm:col-span-2 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                />
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {presetPrompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => setAiNotes(prompt)}
-                    className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/70 hover:border-white/30"
+              {previewBranding ? (
+                <div ref={splitRef} className="mt-5 flex flex-col gap-6 lg:flex-row lg:gap-0">
+                  <div
+                    className="lg:pr-6"
+                    style={{ flexBasis: `${splitRatio}%` }}
                   >
-                    {prompt.slice(0, 32)}…
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleGenerateBranding}
-                  disabled={aiLoading}
-                  className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/80 hover:border-white/30"
-                >
-                  {aiLoading ? 'Generating…' : 'Generate with AI'}
-                </button>
-                {previewBranding && !previewOpen && (
-                  <button
-                    type="button"
-                    onClick={() => setPreviewOpen(true)}
-                    className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/80 hover:border-white/30"
-                  >
-                    Open preview
-                  </button>
-                )}
-                {aiStatus && <span className="text-xs text-emerald-300">{aiStatus}</span>}
-                {aiError && <span className="text-xs text-rose-300">{aiError}</span>}
-              </div>
-              {brandingJsonError && (
-                <p className="mt-2 text-xs text-rose-300">{brandingJsonError}</p>
-              )}
-              {previewBranding && previewOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-6">
-                  <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-slate-900/90 p-6 shadow-2xl backdrop-blur">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs uppercase tracking-[0.3em] text-white/60">
-                        Branding preview
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewOpen(false)}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 hover:border-white/30"
-                      >
-                        Close
-                      </button>
+                    <div className="text-xs uppercase tracking-[0.3em] text-white/60">
+                      Branding preview
                     </div>
                     <div
-                      className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-6"
+                      className="mt-3 rounded-3xl border border-white/10 bg-white/5 p-6"
                       style={{
                         '--brand-bg-base': previewBranding.theme?.background?.base || '#0b1020',
                         '--brand-bg-top': previewBranding.theme?.background?.radialTop || 'rgba(59,130,246,0.35)',
@@ -838,6 +742,224 @@ function App() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="hidden lg:flex items-stretch">
+                    <div
+                      role="separator"
+                      aria-orientation="vertical"
+                      onMouseDown={() => setIsResizing(true)}
+                      className={`mx-2 w-1 cursor-col-resize rounded-full bg-white/10 hover:bg-white/30 ${
+                        isResizing ? 'bg-white/40' : ''
+                      }`}
+                    />
+                  </div>
+
+                  <div
+                    className="lg:pl-6"
+                    style={{ flexBasis: `${100 - splitRatio}%` }}
+                  >
+                    <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
+                      <input
+                        type="text"
+                        value={domainInput}
+                        onChange={(event) => setDomainInput(event.target.value)}
+                        placeholder="connect.universi.no"
+                        className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                      />
+                      <select
+                        value={targetApp}
+                        onChange={(event) => setTargetApp(event.target.value)}
+                        className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                      >
+                        <option value="aichat">aichat</option>
+                        <option value="connect">connect</option>
+                        <option value="photos">photos</option>
+                      </select>
+                    </div>
+                    <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                      <input
+                        type="text"
+                        value={logoUrl}
+                        onChange={(event) => setLogoUrl(event.target.value)}
+                        placeholder="https://example.com/logo.png"
+                        className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                      />
+                      <input
+                        type="text"
+                        value={slogan}
+                        onChange={(event) => setSlogan(event.target.value)}
+                        placeholder="Brand slogan"
+                        className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddDomain}
+                        disabled={domainLoading}
+                        className="rounded-2xl bg-gradient-to-r from-sky-500 to-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/30"
+                      >
+                        {domainLoading ? 'Saving...' : isEditing ? 'Save changes' : 'Add domain'}
+                      </button>
+                    </div>
+                    <textarea
+                      value={brandingJson}
+                      onChange={(event) => setBrandingJson(event.target.value)}
+                      placeholder="Branding JSON (optional)"
+                      rows={4}
+                      className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                    />
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <input
+                        type="text"
+                        value={aiBrandName}
+                        onChange={(event) => setAiBrandName(event.target.value)}
+                        placeholder="Brand name for AI (optional)"
+                        className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                      />
+                      <input
+                        type="text"
+                        value={aiAudience}
+                        onChange={(event) => setAiAudience(event.target.value)}
+                        placeholder="Audience (optional)"
+                        className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                      />
+                      <input
+                        type="text"
+                        value={aiNotes}
+                        onChange={(event) => setAiNotes(event.target.value)}
+                        placeholder="AI prompt (style, tone, colors)"
+                        className="sm:col-span-2 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                      />
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {presetPrompts.map((prompt) => (
+                        <button
+                          key={prompt}
+                          type="button"
+                          onClick={() => setAiNotes(prompt)}
+                          className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/70 hover:border-white/30"
+                        >
+                          {prompt.slice(0, 32)}…
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleGenerateBranding}
+                        disabled={aiLoading}
+                        className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/80 hover:border-white/30"
+                      >
+                        {aiLoading ? 'Generating…' : 'Generate with AI'}
+                      </button>
+                      {aiStatus && <span className="text-xs text-emerald-300">{aiStatus}</span>}
+                      {aiError && <span className="text-xs text-rose-300">{aiError}</span>}
+                    </div>
+                    {brandingJsonError && (
+                      <p className="mt-2 text-xs text-rose-300">{brandingJsonError}</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5">
+                  <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
+                    <input
+                      type="text"
+                      value={domainInput}
+                      onChange={(event) => setDomainInput(event.target.value)}
+                      placeholder="connect.universi.no"
+                      className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                    />
+                    <select
+                      value={targetApp}
+                      onChange={(event) => setTargetApp(event.target.value)}
+                      className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                    >
+                      <option value="aichat">aichat</option>
+                      <option value="connect">connect</option>
+                      <option value="photos">photos</option>
+                    </select>
+                  </div>
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                    <input
+                      type="text"
+                      value={logoUrl}
+                      onChange={(event) => setLogoUrl(event.target.value)}
+                      placeholder="https://example.com/logo.png"
+                      className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                    />
+                    <input
+                      type="text"
+                      value={slogan}
+                      onChange={(event) => setSlogan(event.target.value)}
+                      placeholder="Brand slogan"
+                      className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddDomain}
+                      disabled={domainLoading}
+                      className="rounded-2xl bg-gradient-to-r from-sky-500 to-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/30"
+                    >
+                      {domainLoading ? 'Saving...' : isEditing ? 'Save changes' : 'Add domain'}
+                    </button>
+                  </div>
+                  <textarea
+                    value={brandingJson}
+                    onChange={(event) => setBrandingJson(event.target.value)}
+                    placeholder="Branding JSON (optional)"
+                    rows={4}
+                    className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                  />
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <input
+                      type="text"
+                      value={aiBrandName}
+                      onChange={(event) => setAiBrandName(event.target.value)}
+                      placeholder="Brand name for AI (optional)"
+                      className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                    />
+                    <input
+                      type="text"
+                      value={aiAudience}
+                      onChange={(event) => setAiAudience(event.target.value)}
+                      placeholder="Audience (optional)"
+                      className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                    />
+                    <input
+                      type="text"
+                      value={aiNotes}
+                      onChange={(event) => setAiNotes(event.target.value)}
+                      placeholder="AI prompt (style, tone, colors)"
+                      className="sm:col-span-2 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                    />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {presetPrompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => setAiNotes(prompt)}
+                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/70 hover:border-white/30"
+                      >
+                        {prompt.slice(0, 32)}…
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleGenerateBranding}
+                      disabled={aiLoading}
+                      className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/80 hover:border-white/30"
+                    >
+                      {aiLoading ? 'Generating…' : 'Generate with AI'}
+                    </button>
+                    {aiStatus && <span className="text-xs text-emerald-300">{aiStatus}</span>}
+                    {aiError && <span className="text-xs text-rose-300">{aiError}</span>}
+                  </div>
+                  {brandingJsonError && (
+                    <p className="mt-2 text-xs text-rose-300">{brandingJsonError}</p>
+                  )}
                 </div>
               )}
 
