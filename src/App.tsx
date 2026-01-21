@@ -150,7 +150,7 @@ function App() {
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [brandApp, setBrandApp] = useState<string | null>(null);
   const [brandSlogan, setBrandSlogan] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'starter' | 'domains'>('starter');
+  const [activeTab, setActiveTab] = useState<'starter' | 'domains' | 'branding'>('starter');
   const isEditing = Boolean(domainInput && domainConfigs[domainInput]);
 
   const updateBrandingDraft = (partial: BrandingPreview) => {
@@ -1256,6 +1256,18 @@ function App() {
               >
                 Domains
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('branding')}
+                className={cx(
+                  'rounded-full px-5 py-2 text-sm font-medium transition',
+                  activeTab === 'branding'
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/60 hover:text-white/80'
+                )}
+              >
+                Branding
+              </button>
             </div>
 
             {activeTab === 'starter' && (
@@ -1287,12 +1299,15 @@ function App() {
               </section>
             )}
 
-            {activeTab === 'domains' && (
+            {activeTab === 'branding' && (
             <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
-              <h2 className="text-2xl font-semibold text-white">Custom Domain Panel</h2>
+              <h2 className="text-2xl font-semibold text-white">
+                {isEditing ? `Edit: ${domainInput}` : 'Add New Domain'}
+              </h2>
               <p className="mt-2 text-sm text-white/70">
-                Add a custom domain and point it to the correct app. This uses the Cloudflare API
-                on your account.
+                {isEditing
+                  ? 'Configure branding and settings for this domain.'
+                  : 'Add a custom domain and configure its branding. This uses the Cloudflare API on your account.'}
               </p>
 
               {previewBranding ? (
@@ -1779,79 +1794,109 @@ function App() {
               {domainError && (
                 <p className="mt-3 text-xs text-rose-300">{domainError}</p>
               )}
+            </section>
+            )}
 
-              <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/50 px-6 py-5 text-sm text-white/70">
-                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
-                  Domains on this project
-                </div>
-                {domainList.length === 0 ? (
-                  <p className="mt-3 text-white/50">No custom domains found yet.</p>
-                ) : (
-                  <div className="mt-3 space-y-2">
-                    {domainList.map((domain) => {
-                      const status = domainStatuses[domain];
-                      const config = domainConfigs[domain];
-                      const indicatorClass = status?.ready
-                        ? 'bg-emerald-400'
-                        : status?.pending
-                          ? 'bg-amber-400'
-                          : status?.error
-                            ? 'bg-rose-400'
-                            : 'bg-white/30';
-                      const label = status?.ready
-                        ? 'Ready'
-                        : status?.pending
-                          ? 'Pending'
-                          : status?.error
-                            ? 'Error'
-                            : 'Unknown';
+            {activeTab === 'domains' && (
+              <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
+                <h2 className="text-2xl font-semibold text-white">Domains</h2>
+                <p className="mt-2 text-sm text-white/70">
+                  Manage your custom domains. Click Edit to configure branding for a domain.
+                </p>
 
-                      return (
-                        <div key={domain} className="flex flex-wrap items-center gap-3">
-                          <span className={`h-2.5 w-2.5 rounded-full ${indicatorClass}`} />
-                          <span>{domain}</span>
-                          {config?.targetApp && (
-                            <span className="text-xs text-white/50">→ {config.targetApp}</span>
-                          )}
-                          {config?.logoUrl && (
-                            <img
-                              src={config.logoUrl}
-                              alt={`${domain} logo`}
-                              className="h-5 w-auto rounded-full border border-white/10 bg-white/5"
-                            />
-                          )}
-                          {config?.slogan && (
-                            <span className="text-xs text-white/40">{config.slogan}</span>
-                          )}
-                          <span className="text-xs text-white/50">{label}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleEditDomain(domain)}
-                            className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/70 hover:border-white/30"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleViewBranding(domain)}
-                            className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/70 hover:border-white/30"
-                          >
-                            View JSON
-                          </button>
-                        </div>
-                      );
-                    })}
+                <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/50 px-6 py-5 text-sm text-white/70">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+                      Domains on this project
+                    </div>
                     <button
                       type="button"
-                      onClick={() => refreshDomainStatuses(domainList)}
-                      className="mt-2 rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 hover:border-white/30"
+                      onClick={() => {
+                        setDomainInput('');
+                        setTargetApp('aichat');
+                        setLogoUrl('');
+                        setSlogan('');
+                        setBrandingJson('');
+                        setActiveTab('branding');
+                      }}
+                      className="rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 px-4 py-1.5 text-xs font-semibold text-white shadow-lg shadow-sky-500/20"
                     >
-                      Refresh status
+                      + Add Domain
                     </button>
                   </div>
-                )}
-              </div>
-            </section>
+                  {domainList.length === 0 ? (
+                    <p className="mt-4 text-white/50">No custom domains found yet.</p>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {domainList.map((domain) => {
+                        const status = domainStatuses[domain];
+                        const config = domainConfigs[domain];
+                        const indicatorClass = status?.ready
+                          ? 'bg-emerald-400'
+                          : status?.pending
+                            ? 'bg-amber-400'
+                            : status?.error
+                              ? 'bg-rose-400'
+                              : 'bg-white/30';
+                        const label = status?.ready
+                          ? 'Ready'
+                          : status?.pending
+                            ? 'Pending'
+                            : status?.error
+                              ? 'Error'
+                              : 'Unknown';
+
+                        return (
+                          <div key={domain} className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                            <span className={`h-2.5 w-2.5 rounded-full ${indicatorClass}`} />
+                            <span className="font-medium">{domain}</span>
+                            {config?.targetApp && (
+                              <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60">{config.targetApp}</span>
+                            )}
+                            {config?.logoUrl && (
+                              <img
+                                src={config.logoUrl}
+                                alt={`${domain} logo`}
+                                className="h-6 w-6 rounded-full border border-white/10 bg-white/5 object-cover"
+                              />
+                            )}
+                            <span className="text-xs text-white/50">{label}</span>
+                            <div className="ml-auto flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleEditDomain(domain);
+                                  setActiveTab('branding');
+                                }}
+                                className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 hover:border-white/30 hover:bg-white/5"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleViewBranding(domain);
+                                  setActiveTab('branding');
+                                }}
+                                className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 hover:border-white/30 hover:bg-white/5"
+                              >
+                                View JSON
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => refreshDomainStatuses(domainList)}
+                    className="mt-4 rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 hover:border-white/30"
+                  >
+                    Refresh status
+                  </button>
+                </div>
+              </section>
             )}
           </main>
         </div>
