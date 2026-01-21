@@ -23,12 +23,13 @@ function App() {
   const [targetApp, setTargetApp] = useState('aichat');
   const [logoUrl, setLogoUrl] = useState('');
   const [slogan, setSlogan] = useState('');
+  const [brandingJson, setBrandingJson] = useState('');
   const [domainStatus, setDomainStatus] = useState('');
   const [domainError, setDomainError] = useState('');
   const [domainLoading, setDomainLoading] = useState(false);
   const [domainList, setDomainList] = useState<string[]>([]);
   const [domainStatuses, setDomainStatuses] = useState<Record<string, { ready: boolean; pending: boolean; error?: string }>>({});
-  const [domainConfigs, setDomainConfigs] = useState<Record<string, { targetApp?: string; logoUrl?: string; slogan?: string }>>({});
+  const [domainConfigs, setDomainConfigs] = useState<Record<string, { targetApp?: string; logoUrl?: string; slogan?: string; branding?: unknown }>>({});
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [brandApp, setBrandApp] = useState<string | null>(null);
   const [brandSlogan, setBrandSlogan] = useState<string | null>(null);
@@ -234,8 +235,8 @@ function App() {
         const list = Array.isArray(data.domains) ? data.domains : [];
         setDomainList(list);
         if (Array.isArray(data.configs)) {
-          const nextConfigs: Record<string, { targetApp?: string; logoUrl?: string; slogan?: string }> = {};
-          data.configs.forEach((entry: { domain?: string; config?: { targetApp?: string; logoUrl?: string; slogan?: string } }) => {
+          const nextConfigs: Record<string, { targetApp?: string; logoUrl?: string; slogan?: string; branding?: unknown }> = {};
+          data.configs.forEach((entry: { domain?: string; config?: { targetApp?: string; logoUrl?: string; slogan?: string; branding?: unknown } }) => {
             if (entry?.domain) {
               nextConfigs[entry.domain] = entry.config || {};
             }
@@ -329,6 +330,33 @@ function App() {
     setTargetApp(config.targetApp || 'aichat');
     setLogoUrl(config.logoUrl || '');
     setSlogan(config.slogan || '');
+    if (config?.branding) {
+      setBrandingJson(JSON.stringify(config.branding, null, 2));
+    } else {
+      setBrandingJson('');
+    }
+  };
+
+  const handleViewBranding = async (domain: string) => {
+    if (!DOMAIN_API_BASE) return;
+    try {
+      const response = await fetch(
+        `${DOMAIN_API_BASE}/custom-domain?domain=${encodeURIComponent(domain)}`
+      );
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Failed to load branding.');
+      }
+      if (data?.config?.branding) {
+        setBrandingJson(JSON.stringify(data.config.branding, null, 2));
+        setDomainInput(domain);
+        setTargetApp(data?.config?.targetApp || 'aichat');
+        setLogoUrl(data?.config?.logoUrl || '');
+        setSlogan(data?.config?.slogan || '');
+      }
+    } catch (error) {
+      setDomainError(error instanceof Error ? error.message : 'Failed to load branding.');
+    }
   };
 
   const handleAddDomain = async () => {
@@ -342,6 +370,15 @@ function App() {
         setDomainLoading(false);
         return;
       }
+      let brandingPayload;
+      if (brandingJson.trim()) {
+        try {
+          brandingPayload = JSON.parse(brandingJson);
+        } catch (error) {
+          throw new Error('Branding JSON must be valid JSON.');
+        }
+      }
+
       const response = await fetch(`${DOMAIN_API_BASE}/custom-domain`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -349,7 +386,8 @@ function App() {
           domain: domainInput.trim(),
           targetApp,
           logoUrl,
-          slogan
+          slogan,
+          branding: brandingPayload
         })
       });
       const data = await response.json();
@@ -360,6 +398,7 @@ function App() {
       setDomainInput('');
       setLogoUrl('');
       setSlogan('');
+      setBrandingJson('');
       if (Array.isArray(data.domains)) {
         setDomainList(data.domains);
         refreshDomainStatuses(data.domains);
@@ -370,12 +409,13 @@ function App() {
           [data.domain]: {
             targetApp: data.config.targetApp,
             logoUrl: data.config.logoUrl,
-            slogan: data.config.slogan
+            slogan: data.config.slogan,
+            branding: data.config.branding
           }
         }));
       } else if (Array.isArray(data.configs)) {
-        const nextConfigs: Record<string, { targetApp?: string; logoUrl?: string; slogan?: string }> = {};
-        data.configs.forEach((entry: { domain?: string; config?: { targetApp?: string; logoUrl?: string; slogan?: string } }) => {
+        const nextConfigs: Record<string, { targetApp?: string; logoUrl?: string; slogan?: string; branding?: unknown }> = {};
+        data.configs.forEach((entry: { domain?: string; config?: { targetApp?: string; logoUrl?: string; slogan?: string; branding?: unknown } }) => {
           if (entry?.domain) {
             nextConfigs[entry.domain] = entry.config || {};
           }
@@ -535,6 +575,13 @@ function App() {
                   {domainLoading ? 'Adding...' : 'Add domain'}
                 </button>
               </div>
+              <textarea
+                value={brandingJson}
+                onChange={(event) => setBrandingJson(event.target.value)}
+                placeholder="Branding JSON (optional)"
+                rows={4}
+                className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+              />
 
               {domainStatus && (
                 <p className="mt-3 text-xs text-emerald-300">{domainStatus}</p>
@@ -593,6 +640,13 @@ function App() {
                             className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/70 hover:border-white/30"
                           >
                             Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleViewBranding(domain)}
+                            className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/70 hover:border-white/30"
+                          >
+                            View JSON
                           </button>
                         </div>
                       );

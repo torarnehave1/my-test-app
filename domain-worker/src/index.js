@@ -248,6 +248,7 @@ export default {
     const targetAppRaw = body?.targetApp || '';
     const logoUrl = typeof body?.logoUrl === 'string' ? body.logoUrl.trim() : '';
     const slogan = typeof body?.slogan === 'string' ? body.slogan.trim() : '';
+    const branding = typeof body?.branding === 'object' && body.branding !== null ? body.branding : null;
     const targetApp = normalizeApp(targetAppRaw || '');
     if (!domain || !isValidDomain(domain)) {
       return jsonResponse({ success: false, message: 'Please provide a valid domain.' }, 400);
@@ -283,6 +284,7 @@ export default {
         targetApp,
         logoUrl,
         slogan,
+        branding: branding || existingConfig?.branding || null,
         updatedAt: now,
         createdAt: existingConfig?.createdAt || now
       };

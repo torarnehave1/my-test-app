@@ -14,6 +14,118 @@ export default {
     const url = new URL(request.url);
     let targetOrigin = defaultOrigin;
 
+    const buildBrandingResponse = async () => {
+      const cache = caches.default;
+      const cacheKey = new Request(url.toString(), { method: 'GET' });
+      const cached = await cache.match(cacheKey);
+      if (cached) return cached;
+
+      const defaults = {
+        brand: {
+          name: 'Vegvisr',
+          logoUrl: '',
+          slogan: 'Vegvisr Connect - Early Access'
+        },
+        theme: {
+          background: {
+            base: '#0b1020',
+            radialTop: 'rgba(59,130,246,0.35)',
+            radialBottom: 'rgba(139,92,246,0.35)'
+          },
+          text: {
+            primary: '#e5e7eb',
+            muted: 'rgba(229,231,235,0.7)',
+            headlineGradient: ['#3b82f6', '#8b5cf6']
+          },
+          card: {
+            bg: 'rgba(255,255,255,0.12)',
+            border: 'rgba(255,255,255,0.2)'
+          },
+          button: {
+            bgGradient: ['#3b82f6', '#8b5cf6'],
+            text: '#ffffff'
+          }
+        },
+        copy: {
+          badge: 'Vegvisr Connect - Early Access',
+          headline: 'Find your learning path with Vegvisr',
+          subheadline: 'Answer a few questions so we can tailor your onboarding experience.',
+          emailLabel: 'Enter your email to get a magic link',
+          emailPlaceholder: 'Enter your email address',
+          cta: 'Send magic link'
+        },
+        language: {
+          default: 'en'
+        },
+        layout: {
+          showLanguageToggle: true
+        }
+      };
+
+      let config = null;
+      if (env.BRAND_CONFIG) {
+        const keys = [`brand:${url.hostname}`];
+        if (url.hostname.startsWith('www.')) {
+          keys.push(`brand:${url.hostname.replace(/^www\./, '')}`);
+        }
+        for (const key of keys) {
+          const raw = await env.BRAND_CONFIG.get(key);
+          if (raw) {
+            try {
+              config = JSON.parse(raw);
+              break;
+            } catch {
+              // ignore invalid config
+            }
+          }
+        }
+      }
+
+      const branding = config?.branding || {};
+      const merged = {
+        brand: {
+          ...defaults.brand,
+          ...branding.brand,
+          logoUrl: branding?.brand?.logoUrl || config?.logoUrl || defaults.brand.logoUrl,
+          slogan: branding?.brand?.slogan || config?.slogan || defaults.brand.slogan,
+          name: branding?.brand?.name || defaults.brand.name
+        },
+        theme: {
+          ...defaults.theme,
+          ...branding.theme,
+          background: { ...defaults.theme.background, ...branding?.theme?.background },
+          text: { ...defaults.theme.text, ...branding?.theme?.text },
+          card: { ...defaults.theme.card, ...branding?.theme?.card },
+          button: { ...defaults.theme.button, ...branding?.theme?.button }
+        },
+        copy: {
+          ...defaults.copy,
+          ...branding.copy
+        },
+        language: {
+          ...defaults.language,
+          ...branding.language
+        },
+        layout: {
+          ...defaults.layout,
+          ...branding.layout
+        }
+      };
+
+      const response = new Response(JSON.stringify(merged), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600'
+        }
+      });
+      await cache.put(cacheKey, response.clone());
+      return response;
+    };
+
+    if (url.pathname === '/branding.json') {
+      return buildBrandingResponse();
+    }
+
     if (env.BRAND_CONFIG) {
       const lookupKeys = [`brand:${url.hostname}`];
       if (url.hostname.startsWith('www.')) {

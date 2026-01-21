@@ -126,7 +126,7 @@ This keeps branding headers working (reverse proxy).
 Both workers use a KV namespace to store the brand mapping:
 
 - Key: `brand:<domain>`
-- Value: `{ domain, targetApp, logoUrl, slogan, createdAt, updatedAt }`
+- Value: `{ domain, targetApp, logoUrl, slogan, branding, createdAt, updatedAt }`
 
 Create it once and bind it in **both** workers.
 Update `proxy-worker/wrangler.toml` and `domain-worker/wrangler.toml` with the KV id.
@@ -162,7 +162,49 @@ The domain worker exposes:
 
 Body example:
 ```json
-{ "domain": "connect.universi.no", "targetApp": "connect", "logoUrl": "https://example.com/logo.png", "slogan": "Move with intention" }
+{
+  "domain": "connect.universi.no",
+  "targetApp": "connect",
+  "logoUrl": "https://example.com/logo.png",
+  "slogan": "Move with intention",
+  "branding": {
+    "brand": {
+      "name": "Movemetime",
+      "logoUrl": "https://example.com/logo.png",
+      "slogan": "Vegvisr Connect - Early Access"
+    },
+    "theme": {
+      "background": {
+        "base": "#0b1020",
+        "radialTop": "rgba(59,130,246,0.35)",
+        "radialBottom": "rgba(139,92,246,0.35)"
+      },
+      "text": {
+        "primary": "#e5e7eb",
+        "muted": "rgba(229,231,235,0.7)",
+        "headlineGradient": ["#3b82f6", "#8b5cf6"]
+      },
+      "card": {
+        "bg": "rgba(255,255,255,0.12)",
+        "border": "rgba(255,255,255,0.2)"
+      },
+      "button": {
+        "bgGradient": ["#3b82f6", "#8b5cf6"],
+        "text": "#ffffff"
+      }
+    },
+    "copy": {
+      "badge": "Vegvisr Connect - Early Access",
+      "headline": "Find your learning path with Vegvisr",
+      "subheadline": "Answer a few questions so we can tailor your onboarding experience.",
+      "emailLabel": "Enter your email to get a magic link",
+      "emailPlaceholder": "Enter your email address",
+      "cta": "Send magic link"
+    },
+    "language": { "default": "en" },
+    "layout": { "showLanguageToggle": true }
+  }
+}
 ```
 
 ### Notes
