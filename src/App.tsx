@@ -33,6 +33,7 @@ function App() {
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [brandApp, setBrandApp] = useState<string | null>(null);
   const [brandSlogan, setBrandSlogan] = useState<string | null>(null);
+  const isEditing = Boolean(domainInput && domainConfigs[domainInput]);
 
   const setLanguage = (value: typeof language) => {
     setLanguageState(value);
@@ -353,6 +354,8 @@ function App() {
         setTargetApp(data?.config?.targetApp || 'aichat');
         setLogoUrl(data?.config?.logoUrl || '');
         setSlogan(data?.config?.slogan || '');
+      } else {
+        setDomainError('No branding JSON stored for this domain yet.');
       }
     } catch (error) {
       setDomainError(error instanceof Error ? error.message : 'Failed to load branding.');
@@ -572,7 +575,7 @@ function App() {
                   disabled={domainLoading}
                   className="rounded-2xl bg-gradient-to-r from-sky-500 to-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/30"
                 >
-                  {domainLoading ? 'Adding...' : 'Add domain'}
+                  {domainLoading ? 'Saving...' : isEditing ? 'Save changes' : 'Add domain'}
                 </button>
               </div>
               <textarea

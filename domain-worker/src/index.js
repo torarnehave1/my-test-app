@@ -153,6 +153,23 @@ const listDomainsForScript = async ({ token, script }) => {
   return domains;
 };
 
+const readDomainIndex = async (env) => {
+  if (!env.BRAND_CONFIG) return [];
+  const raw = await env.BRAND_CONFIG.get('domains:list');
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeDomainIndex = async (env, domains) => {
+  if (!env.BRAND_CONFIG) return;
+  await env.BRAND_CONFIG.put('domains:list', JSON.stringify(domains));
+};
+
 const getDomainStatus = async ({ hostname, token, script }) => {
   const zone = await findZone(hostname, token);
   const dns = await cfRequest(
@@ -217,10 +234,15 @@ export default {
           return jsonResponse({ success: true, status, config });
         }
 
-        const domains = await listDomainsForScript({
-          token: CF_API_TOKEN,
-          script: TARGET_WORKER_NAME
-        });
+        const wantsRefresh = url.searchParams.get('refresh') === '1';
+        let domains = wantsRefresh ? [] : await readDomainIndex(env);
+        if (domains.length === 0) {
+          domains = await listDomainsForScript({
+            token: CF_API_TOKEN,
+            script: TARGET_WORKER_NAME
+          });
+          await writeDomainIndex(env, domains);
+        }
         const configs = await Promise.all(
           domains.map(async (domain) => ({
             domain,
@@ -291,12 +313,11 @@ export default {
       await writeBrandConfig(env, domain, config);
 
       step = 'list-domains';
-      const domains = await listDomainsForScript({
-        token: CF_API_TOKEN,
-        script: TARGET_WORKER_NAME
-      });
+      const domains = await readDomainIndex(env);
+      const nextDomains = domains.includes(domain) ? domains : [...domains, domain];
+      await writeDomainIndex(env, nextDomains);
       const configs = await Promise.all(
-        domains.map(async (domainName) => ({
+        nextDomains.map(async (domainName) => ({
           domain: domainName,
           config: await readBrandConfig(env, domainName)
         }))
@@ -305,7 +326,7 @@ export default {
       return jsonResponse({
         success: true,
         domain,
-        domains,
+        domains: nextDomains,
         config,
         configs
       });
