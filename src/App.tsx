@@ -152,23 +152,29 @@ function App() {
 
   const updateBrandingDraft = (partial: BrandingPreview) => {
     lastBrandingUpdate.current = 'form';
-    setBrandingDraft((prev) => ({
-      ...prev,
-      ...partial,
-      brand: { ...prev.brand, ...partial.brand },
-      meta: { ...prev.meta, ...partial.meta },
-      copy: { ...prev.copy, ...partial.copy },
-      language: { ...prev.language, ...partial.language },
-      layout: { ...prev.layout, ...partial.layout },
-      theme: {
-        ...prev.theme,
-        ...partial.theme,
-        background: { ...prev.theme?.background, ...partial.theme?.background },
-        text: { ...prev.theme?.text, ...partial.theme?.text },
-        card: { ...prev.theme?.card, ...partial.theme?.card },
-        button: { ...prev.theme?.button, ...partial.theme?.button }
-      }
-    }));
+    setBrandingDraft((prev) => {
+      const next = {
+        ...prev,
+        ...partial,
+        brand: { ...prev.brand, ...partial.brand },
+        meta: { ...prev.meta, ...partial.meta },
+        copy: { ...prev.copy, ...partial.copy },
+        language: { ...prev.language, ...partial.language },
+        layout: { ...prev.layout, ...partial.layout },
+        theme: {
+          ...prev.theme,
+          ...partial.theme,
+          background: { ...prev.theme?.background, ...partial.theme?.background },
+          text: { ...prev.theme?.text, ...partial.theme?.text },
+          card: { ...prev.theme?.card, ...partial.theme?.card },
+          button: { ...prev.theme?.button, ...partial.theme?.button }
+        }
+      };
+      setBrandingJson(JSON.stringify(next, null, 2));
+      setBrandingJsonError('');
+      setPreviewBranding(next);
+      return next;
+    });
   };
 
   const renderBrandingEditor = () => (
@@ -1011,8 +1017,15 @@ function App() {
                     className="lg:pr-6"
                     style={{ flexBasis: `${splitRatio}%` }}
                   >
-                    <div className="text-xs uppercase tracking-[0.3em] text-white/60">
-                      Branding preview
+                    <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/60">
+                      <span>Branding preview</span>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewNonce((prev) => prev + 1)}
+                        className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-white/70 hover:border-white/30"
+                      >
+                        Refresh preview
+                      </button>
                     </div>
                     <div className="mt-3 rounded-3xl border border-white/10 bg-white/5 p-3">
                       <div className="mb-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
