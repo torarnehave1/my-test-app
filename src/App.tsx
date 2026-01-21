@@ -70,18 +70,53 @@ function App() {
   const [aiBrandName, setAiBrandName] = useState('');
   const [aiAudience, setAiAudience] = useState('');
   const [aiNotes, setAiNotes] = useState('');
-  const [aiGradientStart, setAiGradientStart] = useState('#3b82f6');
-  const [aiGradientEnd, setAiGradientEnd] = useState('#8b5cf6');
+  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
   const [aiStatus, setAiStatus] = useState('');
-  const presetPrompts = [
-    'Warm, optimistic, oceanic colors. Minimal, premium feel. Clean sans-serif. Friendly, clear copy.',
-    'Dark, high-contrast tech style. Neon blue and teal accents. Bold headlines. Confident, short CTAs.',
-    'Soft, calm wellness theme. Earth tones + light cream background. Gentle, empathetic language.',
-    'Nordic, understated, grayscale with one accent color. Professional, clean, serious tone.',
-    'Playful startup vibe. Bright gradient accents. Short energetic copy. Friendly CTA.',
-    'Luxury editorial look. Deep navy background with gold accents. Elegant, confident tone.'
+  const themeCards = [
+    {
+      id: 'oceanic',
+      name: 'Oceanic Calm',
+      description: 'Deep navy, cool blues, soft glow, modern calm.',
+      prompt: 'Oceanic theme. Deep navy base, cool blue accents, soft glow. Calm, premium feel.',
+      classes: 'from-slate-900 via-slate-900 to-sky-900 border-sky-400/40'
+    },
+    {
+      id: 'tech',
+      name: 'Neon Tech',
+      description: 'High-contrast dark UI with cyan/teal highlights.',
+      prompt: 'High-contrast tech theme. Dark base, cyan/teal accents. Bold, confident copy.',
+      classes: 'from-slate-950 via-slate-900 to-emerald-900 border-emerald-400/40'
+    },
+    {
+      id: 'wellness',
+      name: 'Soft Wellness',
+      description: 'Warm neutrals, gentle tone, friendly UI.',
+      prompt: 'Soft wellness theme. Warm neutrals, gentle gradients, empathetic copy.',
+      classes: 'from-amber-950 via-stone-900 to-rose-900 border-rose-300/40'
+    },
+    {
+      id: 'nordic',
+      name: 'Nordic Minimal',
+      description: 'Monochrome with one crisp accent, understated.',
+      prompt: 'Nordic minimal theme. Monochrome base with one crisp accent. Clean, professional copy.',
+      classes: 'from-slate-900 via-slate-800 to-zinc-900 border-white/30'
+    },
+    {
+      id: 'playful',
+      name: 'Playful Pop',
+      description: 'Bright accents, friendly language, upbeat.',
+      prompt: 'Playful startup theme. Bright accents, energetic tone, short friendly CTA.',
+      classes: 'from-fuchsia-950 via-indigo-950 to-sky-950 border-fuchsia-300/40'
+    },
+    {
+      id: 'luxury',
+      name: 'Luxury Editorial',
+      description: 'Deep navy with gold accents, elegant.',
+      prompt: 'Luxury editorial theme. Deep navy base with gold accents. Elegant, confident tone.',
+      classes: 'from-slate-950 via-slate-900 to-amber-900 border-amber-300/40'
+    }
   ];
   const [domainStatus, setDomainStatus] = useState('');
   const [domainError, setDomainError] = useState('');
@@ -554,8 +589,7 @@ function App() {
           brandName: aiBrandName,
           audience: aiAudience,
           appName: appNameMap[targetApp] || 'Vegvisr Connect',
-          prompt: aiNotes,
-          gradient: { start: aiGradientStart, end: aiGradientEnd }
+          prompt: aiNotes
         })
       });
       const data = await response.json();
@@ -782,36 +816,6 @@ function App() {
                         placeholder="Audience (optional)"
                         className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
                       />
-                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white">
-                        <span className="text-white/60">Gradient start</span>
-                        <input
-                          type="color"
-                          value={aiGradientStart}
-                          onChange={(event) => setAiGradientStart(event.target.value)}
-                          className="h-6 w-10 cursor-pointer rounded-full border border-white/20 bg-transparent"
-                        />
-                        <input
-                          type="text"
-                          value={aiGradientStart}
-                          onChange={(event) => setAiGradientStart(event.target.value)}
-                          className="w-24 rounded-xl border border-white/10 bg-slate-900/80 px-2 py-1 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                        />
-                      </div>
-                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white">
-                        <span className="text-white/60">Gradient end</span>
-                        <input
-                          type="color"
-                          value={aiGradientEnd}
-                          onChange={(event) => setAiGradientEnd(event.target.value)}
-                          className="h-6 w-10 cursor-pointer rounded-full border border-white/20 bg-transparent"
-                        />
-                        <input
-                          type="text"
-                          value={aiGradientEnd}
-                          onChange={(event) => setAiGradientEnd(event.target.value)}
-                          className="w-24 rounded-xl border border-white/10 bg-slate-900/80 px-2 py-1 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                        />
-                      </div>
                       <input
                         type="text"
                         value={aiNotes}
@@ -820,15 +824,24 @@ function App() {
                         className="sm:col-span-2 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
                       />
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {presetPrompts.map((prompt) => (
+                    <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                      {themeCards.map((theme) => (
                         <button
-                          key={prompt}
+                          key={theme.id}
                           type="button"
-                          onClick={() => setAiNotes(prompt)}
-                          className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/70 hover:border-white/30"
+                          onClick={() => {
+                            setSelectedTheme(theme.id);
+                            setAiNotes(theme.prompt);
+                          }}
+                          className={`rounded-2xl border px-4 py-3 text-left text-xs text-white/80 transition ${
+                            selectedTheme === theme.id
+                              ? 'border-white/40 ring-1 ring-white/30'
+                              : 'border-white/10 hover:border-white/30'
+                          }`}
                         >
-                          {prompt.slice(0, 32)}…
+                          <div className={`mb-3 h-14 rounded-xl border bg-gradient-to-br ${theme.classes}`} />
+                          <div className="text-sm font-semibold text-white">{theme.name}</div>
+                          <div className="mt-1 text-xs text-white/60">{theme.description}</div>
                         </button>
                       ))}
                     </div>
@@ -915,36 +928,6 @@ function App() {
                       placeholder="Audience (optional)"
                       className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
                     />
-                    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white">
-                      <span className="text-white/60">Gradient start</span>
-                      <input
-                        type="color"
-                        value={aiGradientStart}
-                        onChange={(event) => setAiGradientStart(event.target.value)}
-                        className="h-6 w-10 cursor-pointer rounded-full border border-white/20 bg-transparent"
-                      />
-                      <input
-                        type="text"
-                        value={aiGradientStart}
-                        onChange={(event) => setAiGradientStart(event.target.value)}
-                        className="w-24 rounded-xl border border-white/10 bg-slate-900/80 px-2 py-1 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                      />
-                    </div>
-                    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white">
-                      <span className="text-white/60">Gradient end</span>
-                      <input
-                        type="color"
-                        value={aiGradientEnd}
-                        onChange={(event) => setAiGradientEnd(event.target.value)}
-                        className="h-6 w-10 cursor-pointer rounded-full border border-white/20 bg-transparent"
-                      />
-                      <input
-                        type="text"
-                        value={aiGradientEnd}
-                        onChange={(event) => setAiGradientEnd(event.target.value)}
-                        className="w-24 rounded-xl border border-white/10 bg-slate-900/80 px-2 py-1 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                      />
-                    </div>
                     <input
                       type="text"
                       value={aiNotes}
@@ -953,15 +936,24 @@ function App() {
                       className="sm:col-span-2 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
                     />
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {presetPrompts.map((prompt) => (
+                  <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                    {themeCards.map((theme) => (
                       <button
-                        key={prompt}
+                        key={theme.id}
                         type="button"
-                        onClick={() => setAiNotes(prompt)}
-                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/70 hover:border-white/30"
+                        onClick={() => {
+                          setSelectedTheme(theme.id);
+                          setAiNotes(theme.prompt);
+                        }}
+                        className={`rounded-2xl border px-4 py-3 text-left text-xs text-white/80 transition ${
+                          selectedTheme === theme.id
+                            ? 'border-white/40 ring-1 ring-white/30'
+                            : 'border-white/10 hover:border-white/30'
+                        }`}
                       >
-                        {prompt.slice(0, 32)}…
+                        <div className={`mb-3 h-14 rounded-xl border bg-gradient-to-br ${theme.classes}`} />
+                        <div className="text-sm font-semibold text-white">{theme.name}</div>
+                        <div className="mt-1 text-xs text-white/60">{theme.description}</div>
                       </button>
                     ))}
                   </div>
