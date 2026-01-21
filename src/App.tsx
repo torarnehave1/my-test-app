@@ -150,6 +150,7 @@ function App() {
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [brandApp, setBrandApp] = useState<string | null>(null);
   const [brandSlogan, setBrandSlogan] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'starter' | 'domains'>('starter');
   const isEditing = Boolean(domainInput && domainConfigs[domainInput]);
 
   const updateBrandingDraft = (partial: BrandingPreview) => {
@@ -1064,34 +1065,64 @@ function App() {
           )}
 
           <main className="mt-16">
-            <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
-              <h1 className="text-3xl font-semibold text-white">{t('app.title')}</h1>
-              <p className="mt-3 text-sm text-white/70">
-                Starter shell. Replace this section with your app content.
-              </p>
-              {brandApp && (
-                <p className="mt-2 text-xs text-white/50">
-                  Brand target app: {brandApp}
-                </p>
-              )}
-              {brandSlogan && (
-                <p className="mt-1 text-sm text-white/70">
-                  {brandSlogan}
-                </p>
-              )}
-              <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/50 px-6 py-5 text-sm text-white/70">
-                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
-                  Starter Notes
-                </div>
-                <ul className="mt-3 list-disc space-y-2 pl-5">
-                  <li>Auth + magic link flow is wired.</li>
-                  <li>Language selector and ecosystem nav are ready.</li>
-                  <li>Replace logo + icon assets for your app.</li>
-                </ul>
-              </div>
-            </section>
+            <div className="mb-6 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('starter')}
+                className={cx(
+                  'rounded-full px-5 py-2 text-sm font-medium transition',
+                  activeTab === 'starter'
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/60 hover:text-white/80'
+                )}
+              >
+                Starter
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('domains')}
+                className={cx(
+                  'rounded-full px-5 py-2 text-sm font-medium transition',
+                  activeTab === 'domains'
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/60 hover:text-white/80'
+                )}
+              >
+                Domains
+              </button>
+            </div>
 
-            <section className="mt-10 rounded-3xl border border-white/10 bg-white/5 p-8">
+            {activeTab === 'starter' && (
+              <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
+                <h1 className="text-3xl font-semibold text-white">{t('app.title')}</h1>
+                <p className="mt-3 text-sm text-white/70">
+                  Starter shell. Replace this section with your app content.
+                </p>
+                {brandApp && (
+                  <p className="mt-2 text-xs text-white/50">
+                    Brand target app: {brandApp}
+                  </p>
+                )}
+                {brandSlogan && (
+                  <p className="mt-1 text-sm text-white/70">
+                    {brandSlogan}
+                  </p>
+                )}
+                <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/50 px-6 py-5 text-sm text-white/70">
+                  <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+                    Starter Notes
+                  </div>
+                  <ul className="mt-3 list-disc space-y-2 pl-5">
+                    <li>Auth + magic link flow is wired.</li>
+                    <li>Language selector and ecosystem nav are ready.</li>
+                    <li>Replace logo + icon assets for your app.</li>
+                  </ul>
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'domains' && (
+            <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
               <h2 className="text-2xl font-semibold text-white">Custom Domain Panel</h2>
               <p className="mt-2 text-sm text-white/70">
                 Add a custom domain and point it to the correct app. This uses the Cloudflare API
@@ -1647,6 +1678,7 @@ function App() {
                 )}
               </div>
             </section>
+            )}
           </main>
         </div>
       </div>

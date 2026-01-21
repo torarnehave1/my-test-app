@@ -26,6 +26,12 @@ export default {
           logoUrl: '',
           slogan: 'Vegvisr Connect - Early Access'
         },
+        meta: {
+          title: '',
+          faviconUrl: '',
+          description: '',
+          ogImageUrl: ''
+        },
         theme: {
           background: {
             base: '#0b1020',
@@ -89,6 +95,10 @@ export default {
           logoUrl: branding?.brand?.logoUrl || config?.logoUrl || defaults.brand.logoUrl,
           slogan: branding?.brand?.slogan || config?.slogan || defaults.brand.slogan,
           name: branding?.brand?.name || defaults.brand.name
+        },
+        meta: {
+          ...defaults.meta,
+          ...branding.meta
         },
         theme: {
           ...defaults.theme,
