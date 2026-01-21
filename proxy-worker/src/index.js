@@ -119,7 +119,9 @@ export default {
         layout: {
           ...defaults.layout,
           ...branding.layout
-        }
+        },
+        // Pass through translations if provided in branding config
+        ...(branding.translations ? { translations: branding.translations } : {})
       };
 
       const response = new Response(JSON.stringify(merged), {

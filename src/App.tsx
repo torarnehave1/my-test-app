@@ -55,6 +55,11 @@ type BrandingPreview = {
   layout?: {
     showLanguageToggle?: boolean;
   };
+  translations?: {
+    [language: string]: {
+      [key: string]: string | string[] | { [nestedKey: string]: string | string[] };
+    };
+  };
 };
 
 const cx = (...classes: Array<string | false | null | undefined>) =>
