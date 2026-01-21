@@ -1325,7 +1325,7 @@ function App() {
                         color: 'var(--brand-text-primary)'
                       } as Record<string, string>}
                     >
-                      <div className="relative mb-6 h-36 w-full rounded-2xl border border-white/10 bg-white/5">
+                      <div className="relative mb-3 h-72 w-full rounded-2xl border border-white/10 bg-white/5">
                         {ensureBackgroundPoints(brandingDraft.theme?.background?.points).map((point) => (
                           <button
                             key={point.id}
@@ -1362,40 +1362,48 @@ function App() {
                             aria-label={`Gradient point ${point.id}`}
                           />
                         ))}
-                        {selectedPointId && (
-                          <div className="absolute right-3 top-3 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-xs text-white/70">
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-white/50">
-                              Gradient point
-                            </div>
-                            <div className="mt-2 flex items-center gap-2">
-                              <input
-                                type="color"
-                                value={
-                                  ensureBackgroundPoints(brandingDraft.theme?.background?.points).find(
-                                    (point) => point.id === selectedPointId
-                                  )?.color || '#3b82f6'
-                                }
-                                onChange={(event) =>
-                                  updatePoint(selectedPointId, { color: event.target.value })
-                                }
-                                className="h-6 w-8 cursor-pointer rounded-full border border-white/20 bg-transparent"
-                              />
-                              <input
-                                type="text"
-                                value={
-                                  ensureBackgroundPoints(brandingDraft.theme?.background?.points).find(
-                                    (point) => point.id === selectedPointId
-                                  )?.color || ''
-                                }
-                                onChange={(event) =>
-                                  updatePoint(selectedPointId, { color: event.target.value })
-                                }
-                                className="w-24 rounded-md border border-white/10 bg-slate-900/80 px-2 py-1 text-xs text-white/80"
-                              />
-                            </div>
-                          </div>
-                        )}
                       </div>
+                      {selectedPointId && (
+                        <div className="mb-4 flex items-center gap-3 rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3">
+                          <div className="text-[10px] uppercase tracking-[0.3em] text-white/50">
+                            Gradient point
+                          </div>
+                          <input
+                            type="color"
+                            title="Gradient point color picker"
+                            value={
+                              ensureBackgroundPoints(brandingDraft.theme?.background?.points).find(
+                                (point) => point.id === selectedPointId
+                              )?.color || '#3b82f6'
+                            }
+                            onChange={(event) =>
+                              updatePoint(selectedPointId, { color: event.target.value })
+                            }
+                            className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            title="Gradient point color value"
+                            placeholder="#3b82f6"
+                            value={
+                              ensureBackgroundPoints(brandingDraft.theme?.background?.points).find(
+                                (point) => point.id === selectedPointId
+                              )?.color || ''
+                            }
+                            onChange={(event) =>
+                              updatePoint(selectedPointId, { color: event.target.value })
+                            }
+                            className="w-28 rounded-md border border-white/10 bg-slate-900/80 px-3 py-2 text-xs text-white/80"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPointId(null)}
+                            className="ml-auto text-xs text-white/50 hover:text-white/80"
+                          >
+                            Done
+                          </button>
+                        </div>
+                      )}
                       <div className="flex items-start gap-4">
                         <div
                           role="button"
