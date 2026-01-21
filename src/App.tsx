@@ -17,6 +17,12 @@ type BrandingPreview = {
     logoUrl?: string;
     slogan?: string;
   };
+  meta?: {
+    title?: string;
+    faviconUrl?: string;
+    description?: string;
+    ogImageUrl?: string;
+  };
   theme?: {
     background?: {
       base?: string;
@@ -45,6 +51,12 @@ type BrandingPreview = {
     emailPlaceholder?: string;
     cta?: string;
   };
+  language?: {
+    default?: string;
+  };
+  layout?: {
+    showLanguageToggle?: boolean;
+  };
 };
 
 function App() {
@@ -63,6 +75,15 @@ function App() {
   const [brandingJson, setBrandingJson] = useState('');
   const [brandingJsonError, setBrandingJsonError] = useState('');
   const [previewBranding, setPreviewBranding] = useState<BrandingPreview | null>(null);
+  const [brandingDraft, setBrandingDraft] = useState<BrandingPreview>({
+    brand: {},
+    meta: {},
+    theme: {},
+    copy: {},
+    language: { default: 'en' },
+    layout: { showLanguageToggle: true }
+  });
+  const lastBrandingUpdate = useRef<'json' | 'form' | null>(null);
   const [splitRatio, setSplitRatio] = useState(50);
   const [isResizing, setIsResizing] = useState(false);
   const [previewNonce, setPreviewNonce] = useState(0);
@@ -129,6 +150,266 @@ function App() {
   const [brandSlogan, setBrandSlogan] = useState<string | null>(null);
   const isEditing = Boolean(domainInput && domainConfigs[domainInput]);
 
+  const updateBrandingDraft = (partial: BrandingPreview) => {
+    lastBrandingUpdate.current = 'form';
+    setBrandingDraft((prev) => ({
+      ...prev,
+      ...partial,
+      brand: { ...prev.brand, ...partial.brand },
+      meta: { ...prev.meta, ...partial.meta },
+      copy: { ...prev.copy, ...partial.copy },
+      language: { ...prev.language, ...partial.language },
+      layout: { ...prev.layout, ...partial.layout },
+      theme: {
+        ...prev.theme,
+        ...partial.theme,
+        background: { ...prev.theme?.background, ...partial.theme?.background },
+        text: { ...prev.theme?.text, ...partial.theme?.text },
+        card: { ...prev.theme?.card, ...partial.theme?.card },
+        button: { ...prev.theme?.button, ...partial.theme?.button }
+      }
+    }));
+  };
+
+  const renderBrandingEditor = () => (
+    <div className="mt-4 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+      <div className="text-xs uppercase tracking-[0.3em] text-white/60">Direct branding fields</div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <input
+          type="text"
+          value={brandingDraft.brand?.name || ''}
+          onChange={(event) => updateBrandingDraft({ brand: { name: event.target.value } })}
+          placeholder="Brand name"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.brand?.logoUrl || ''}
+          onChange={(event) => updateBrandingDraft({ brand: { logoUrl: event.target.value } })}
+          placeholder="Logo URL"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.brand?.slogan || ''}
+          onChange={(event) => updateBrandingDraft({ brand: { slogan: event.target.value } })}
+          placeholder="Slogan"
+          className="sm:col-span-2 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+      </div>
+
+      <div className="mt-5 text-xs uppercase tracking-[0.3em] text-white/60">Meta / tab</div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <input
+          type="text"
+          value={brandingDraft.meta?.title || ''}
+          onChange={(event) => updateBrandingDraft({ meta: { title: event.target.value } })}
+          placeholder="Tab title"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.meta?.faviconUrl || ''}
+          onChange={(event) => updateBrandingDraft({ meta: { faviconUrl: event.target.value } })}
+          placeholder="Favicon URL"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.meta?.description || ''}
+          onChange={(event) => updateBrandingDraft({ meta: { description: event.target.value } })}
+          placeholder="Meta description"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.meta?.ogImageUrl || ''}
+          onChange={(event) => updateBrandingDraft({ meta: { ogImageUrl: event.target.value } })}
+          placeholder="OG image URL"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+      </div>
+
+      <div className="mt-5 text-xs uppercase tracking-[0.3em] text-white/60">Copy</div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <input
+          type="text"
+          value={brandingDraft.copy?.badge || ''}
+          onChange={(event) => updateBrandingDraft({ copy: { badge: event.target.value } })}
+          placeholder="Badge"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.copy?.headline || ''}
+          onChange={(event) => updateBrandingDraft({ copy: { headline: event.target.value } })}
+          placeholder="Headline"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.copy?.subheadline || ''}
+          onChange={(event) => updateBrandingDraft({ copy: { subheadline: event.target.value } })}
+          placeholder="Subheadline"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.copy?.emailLabel || ''}
+          onChange={(event) => updateBrandingDraft({ copy: { emailLabel: event.target.value } })}
+          placeholder="Email label"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.copy?.emailPlaceholder || ''}
+          onChange={(event) => updateBrandingDraft({ copy: { emailPlaceholder: event.target.value } })}
+          placeholder="Email placeholder"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.copy?.cta || ''}
+          onChange={(event) => updateBrandingDraft({ copy: { cta: event.target.value } })}
+          placeholder="CTA"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+      </div>
+
+      <div className="mt-5 text-xs uppercase tracking-[0.3em] text-white/60">Theme</div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <input
+          type="text"
+          value={brandingDraft.theme?.background?.base || ''}
+          onChange={(event) => updateBrandingDraft({ theme: { background: { base: event.target.value } } })}
+          placeholder="Background base"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.background?.radialTop || ''}
+          onChange={(event) => updateBrandingDraft({ theme: { background: { radialTop: event.target.value } } })}
+          placeholder="Background radial top"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.background?.radialBottom || ''}
+          onChange={(event) => updateBrandingDraft({ theme: { background: { radialBottom: event.target.value } } })}
+          placeholder="Background radial bottom"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.text?.primary || ''}
+          onChange={(event) => updateBrandingDraft({ theme: { text: { primary: event.target.value } } })}
+          placeholder="Text primary"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.text?.muted || ''}
+          onChange={(event) => updateBrandingDraft({ theme: { text: { muted: event.target.value } } })}
+          placeholder="Text muted"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.text?.headlineGradient?.[0] || ''}
+          onChange={(event) =>
+            updateBrandingDraft({
+              theme: {
+                text: {
+                  headlineGradient: [
+                    event.target.value,
+                    brandingDraft.theme?.text?.headlineGradient?.[1] || ''
+                  ]
+                }
+              }
+            })
+          }
+          placeholder="Headline gradient start"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.text?.headlineGradient?.[1] || ''}
+          onChange={(event) =>
+            updateBrandingDraft({
+              theme: {
+                text: {
+                  headlineGradient: [
+                    brandingDraft.theme?.text?.headlineGradient?.[0] || '',
+                    event.target.value
+                  ]
+                }
+              }
+            })
+          }
+          placeholder="Headline gradient end"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.card?.bg || ''}
+          onChange={(event) => updateBrandingDraft({ theme: { card: { bg: event.target.value } } })}
+          placeholder="Card background"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.card?.border || ''}
+          onChange={(event) => updateBrandingDraft({ theme: { card: { border: event.target.value } } })}
+          placeholder="Card border"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.button?.bgGradient?.[0] || ''}
+          onChange={(event) =>
+            updateBrandingDraft({
+              theme: {
+                button: {
+                  bgGradient: [
+                    event.target.value,
+                    brandingDraft.theme?.button?.bgGradient?.[1] || ''
+                  ]
+                }
+              }
+            })
+          }
+          placeholder="Button gradient start"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.button?.bgGradient?.[1] || ''}
+          onChange={(event) =>
+            updateBrandingDraft({
+              theme: {
+                button: {
+                  bgGradient: [
+                    brandingDraft.theme?.button?.bgGradient?.[0] || '',
+                    event.target.value
+                  ]
+                }
+              }
+            })
+          }
+          placeholder="Button gradient end"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+        <input
+          type="text"
+          value={brandingDraft.theme?.button?.text || ''}
+          onChange={(event) => updateBrandingDraft({ theme: { button: { text: event.target.value } } })}
+          placeholder="Button text color"
+          className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+        />
+      </div>
+    </div>
+  );
+
   useEffect(() => {
     if (!brandingJson.trim()) {
       setBrandingJsonError('');
@@ -139,11 +420,22 @@ function App() {
       const parsed = JSON.parse(brandingJson) as BrandingPreview;
       setPreviewBranding(parsed);
       setBrandingJsonError('');
+      if (lastBrandingUpdate.current !== 'form') {
+        setBrandingDraft(parsed);
+      }
+      lastBrandingUpdate.current = null;
     } catch {
       setPreviewBranding(null);
       setBrandingJsonError('Branding JSON must be valid JSON.');
+      lastBrandingUpdate.current = null;
     }
   }, [brandingJson]);
+
+  useEffect(() => {
+    if (lastBrandingUpdate.current !== 'form') return;
+    setBrandingJson(JSON.stringify(brandingDraft, null, 2));
+    lastBrandingUpdate.current = null;
+  }, [brandingDraft]);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -461,8 +753,10 @@ function App() {
     setLogoUrl(config.logoUrl || '');
     setSlogan(config.slogan || '');
     if (config?.branding) {
+      lastBrandingUpdate.current = 'json';
       setBrandingJson(JSON.stringify(config.branding, null, 2));
     } else {
+      lastBrandingUpdate.current = 'json';
       setBrandingJson('');
     }
   };
@@ -478,6 +772,7 @@ function App() {
         throw new Error(data?.message || 'Failed to load branding.');
       }
       if (data?.config?.branding) {
+        lastBrandingUpdate.current = 'json';
         setBrandingJson(JSON.stringify(data.config.branding, null, 2));
         setDomainInput(domain);
         setTargetApp(data?.config?.targetApp || 'aichat');
@@ -531,6 +826,7 @@ function App() {
       if (data?.config?.logoUrl !== undefined) setLogoUrl(data.config.logoUrl || '');
       if (data?.config?.slogan !== undefined) setSlogan(data.config.slogan || '');
       if (data?.config?.branding !== undefined) {
+        lastBrandingUpdate.current = 'json';
         setBrandingJson(
           data.config.branding ? JSON.stringify(data.config.branding, null, 2) : brandingJson
         );
@@ -596,6 +892,7 @@ function App() {
       if (!response.ok || !data?.success) {
         throw new Error(data?.message || 'Failed to generate branding JSON.');
       }
+      lastBrandingUpdate.current = 'json';
       setBrandingJson(JSON.stringify(data.branding, null, 2));
       setAiStatus('Branding JSON generated.');
     } catch (error) {
@@ -796,11 +1093,15 @@ function App() {
                     </div>
                     <textarea
                       value={brandingJson}
-                      onChange={(event) => setBrandingJson(event.target.value)}
+                      onChange={(event) => {
+                        lastBrandingUpdate.current = 'json';
+                        setBrandingJson(event.target.value);
+                      }}
                       placeholder="Branding JSON (optional)"
                       rows={4}
                       className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
                     />
+                    {renderBrandingEditor()}
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <input
                         type="text"
@@ -908,11 +1209,15 @@ function App() {
                   </div>
                   <textarea
                     value={brandingJson}
-                    onChange={(event) => setBrandingJson(event.target.value)}
+                    onChange={(event) => {
+                      lastBrandingUpdate.current = 'json';
+                      setBrandingJson(event.target.value);
+                    }}
                     placeholder="Branding JSON (optional)"
                     rows={4}
                     className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
                   />
+                  {renderBrandingEditor()}
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
                     <input
                       type="text"
