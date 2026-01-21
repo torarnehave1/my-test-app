@@ -59,6 +59,9 @@ type BrandingPreview = {
   };
 };
 
+const cx = (...classes: Array<string | false | null | undefined>) =>
+  classes.filter(Boolean).join(' ');
+
 function App() {
   const [language, setLanguageState] = useState(getStoredLanguage());
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
