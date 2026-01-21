@@ -9,6 +9,43 @@ import { useTranslation } from './lib/useTranslation';
 const MAGIC_BASE = 'https://cookie.vegvisr.org';
 const DASHBOARD_BASE = 'https://dashboard.vegvisr.org';
 const DOMAIN_API_BASE = 'https://test-domain-worker.torarnehave.workers.dev';
+const OPENAI_WORKER_BASE = 'https://openai.vegvisr.org';
+
+type BrandingPreview = {
+  brand?: {
+    name?: string;
+    logoUrl?: string;
+    slogan?: string;
+  };
+  theme?: {
+    background?: {
+      base?: string;
+      radialTop?: string;
+      radialBottom?: string;
+    };
+    text?: {
+      primary?: string;
+      muted?: string;
+      headlineGradient?: [string, string];
+    };
+    card?: {
+      bg?: string;
+      border?: string;
+    };
+    button?: {
+      bgGradient?: [string, string];
+      text?: string;
+    };
+  };
+  copy?: {
+    badge?: string;
+    headline?: string;
+    subheadline?: string;
+    emailLabel?: string;
+    emailPlaceholder?: string;
+    cta?: string;
+  };
+};
 
 function App() {
   const [language, setLanguageState] = useState(getStoredLanguage());
@@ -24,6 +61,22 @@ function App() {
   const [logoUrl, setLogoUrl] = useState('');
   const [slogan, setSlogan] = useState('');
   const [brandingJson, setBrandingJson] = useState('');
+  const [brandingJsonError, setBrandingJsonError] = useState('');
+  const [previewBranding, setPreviewBranding] = useState<BrandingPreview | null>(null);
+  const [aiBrandName, setAiBrandName] = useState('');
+  const [aiAudience, setAiAudience] = useState('');
+  const [aiNotes, setAiNotes] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiStatus, setAiStatus] = useState('');
+  const presetPrompts = [
+    'Warm, optimistic, oceanic colors. Minimal, premium feel. Clean sans-serif. Friendly, clear copy.',
+    'Dark, high-contrast tech style. Neon blue and teal accents. Bold headlines. Confident, short CTAs.',
+    'Soft, calm wellness theme. Earth tones + light cream background. Gentle, empathetic language.',
+    'Nordic, understated, grayscale with one accent color. Professional, clean, serious tone.',
+    'Playful startup vibe. Bright gradient accents. Short energetic copy. Friendly CTA.',
+    'Luxury editorial look. Deep navy background with gold accents. Elegant, confident tone.'
+  ];
   const [domainStatus, setDomainStatus] = useState('');
   const [domainError, setDomainError] = useState('');
   const [domainLoading, setDomainLoading] = useState(false);
@@ -34,6 +87,22 @@ function App() {
   const [brandApp, setBrandApp] = useState<string | null>(null);
   const [brandSlogan, setBrandSlogan] = useState<string | null>(null);
   const isEditing = Boolean(domainInput && domainConfigs[domainInput]);
+
+  useEffect(() => {
+    if (!brandingJson.trim()) {
+      setBrandingJsonError('');
+      setPreviewBranding(null);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(brandingJson) as BrandingPreview;
+      setPreviewBranding(parsed);
+      setBrandingJsonError('');
+    } catch {
+      setPreviewBranding(null);
+      setBrandingJsonError('Branding JSON must be valid JSON.');
+    }
+  }, [brandingJson]);
 
   const setLanguage = (value: typeof language) => {
     setLanguageState(value);
@@ -377,7 +446,7 @@ function App() {
       if (brandingJson.trim()) {
         try {
           brandingPayload = JSON.parse(brandingJson);
-        } catch (error) {
+        } catch {
           throw new Error('Branding JSON must be valid JSON.');
         }
       }
@@ -430,6 +499,44 @@ function App() {
       setDomainError(err instanceof Error ? err.message : 'Failed to add domain.');
     } finally {
       setDomainLoading(false);
+    }
+  };
+
+  const handleGenerateBranding = async () => {
+    setAiError('');
+    setAiStatus('');
+    if (!authUser?.userId) {
+      setAiError('You must be logged in to generate branding JSON.');
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const appNameMap: Record<string, string> = {
+        connect: 'Vegvisr Connect',
+        aichat: 'Vegvisr AI Chat',
+        photos: 'Vegvisr Photos'
+      };
+      const response = await fetch(`${OPENAI_WORKER_BASE}/branding/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': authUser.userId },
+        body: JSON.stringify({
+          userId: authUser.userId,
+          brandName: aiBrandName,
+          audience: aiAudience,
+          appName: appNameMap[targetApp] || 'Vegvisr Connect',
+          prompt: aiNotes
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Failed to generate branding JSON.');
+      }
+      setBrandingJson(JSON.stringify(data.branding, null, 2));
+      setAiStatus('Branding JSON generated.');
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : 'Failed to generate branding JSON.');
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -585,6 +692,125 @@ function App() {
                 rows={4}
                 className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
               />
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <input
+                  type="text"
+                  value={aiBrandName}
+                  onChange={(event) => setAiBrandName(event.target.value)}
+                  placeholder="Brand name for AI (optional)"
+                  className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                />
+                <input
+                  type="text"
+                  value={aiAudience}
+                  onChange={(event) => setAiAudience(event.target.value)}
+                  placeholder="Audience (optional)"
+                  className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                />
+                <input
+                  type="text"
+                  value={aiNotes}
+                  onChange={(event) => setAiNotes(event.target.value)}
+                  placeholder="AI prompt (style, tone, colors)"
+                  className="sm:col-span-2 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {presetPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => setAiNotes(prompt)}
+                    className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/70 hover:border-white/30"
+                  >
+                    {prompt.slice(0, 32)}…
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleGenerateBranding}
+                  disabled={aiLoading}
+                  className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/80 hover:border-white/30"
+                >
+                  {aiLoading ? 'Generating…' : 'Generate with AI'}
+                </button>
+                {aiStatus && <span className="text-xs text-emerald-300">{aiStatus}</span>}
+                {aiError && <span className="text-xs text-rose-300">{aiError}</span>}
+              </div>
+              {brandingJsonError && (
+                <p className="mt-2 text-xs text-rose-300">{brandingJsonError}</p>
+              )}
+              {previewBranding && (
+                <div
+                  className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-6"
+                  style={{
+                    '--brand-bg-base': previewBranding.theme?.background?.base || '#0b1020',
+                    '--brand-bg-top': previewBranding.theme?.background?.radialTop || 'rgba(59,130,246,0.35)',
+                    '--brand-bg-bottom': previewBranding.theme?.background?.radialBottom || 'rgba(139,92,246,0.35)',
+                    '--brand-text-primary': previewBranding.theme?.text?.primary || '#e5e7eb',
+                    '--brand-text-muted': previewBranding.theme?.text?.muted || 'rgba(229,231,235,0.7)',
+                    '--brand-gradient-start': previewBranding.theme?.text?.headlineGradient?.[0] || '#3b82f6',
+                    '--brand-gradient-end': previewBranding.theme?.text?.headlineGradient?.[1] || '#8b5cf6',
+                    '--brand-card-bg': previewBranding.theme?.card?.bg || 'rgba(255,255,255,0.12)',
+                    '--brand-card-border': previewBranding.theme?.card?.border || 'rgba(255,255,255,0.2)',
+                    '--brand-btn-start': previewBranding.theme?.button?.bgGradient?.[0] || '#3b82f6',
+                    '--brand-btn-end': previewBranding.theme?.button?.bgGradient?.[1] || '#8b5cf6',
+                    '--brand-btn-text': previewBranding.theme?.button?.text || '#ffffff',
+                    background:
+                      'radial-gradient(circle at top, var(--brand-bg-top), transparent 55%), radial-gradient(circle at bottom, var(--brand-bg-bottom), transparent 55%), var(--brand-bg-base)',
+                    color: 'var(--brand-text-primary)'
+                  } as Record<string, string>}
+                >
+                  <div className="flex items-center gap-3">
+                    {previewBranding.brand?.logoUrl && (
+                      <img
+                        src={previewBranding.brand?.logoUrl}
+                        alt="Brand logo preview"
+                        className="h-10 w-10 rounded-full border border-white/10 bg-white/10"
+                      />
+                    )}
+                    <div className="text-xs uppercase tracking-[0.3em] text-white/70">
+                      {previewBranding.copy?.badge || 'Brand badge'}
+                    </div>
+                  </div>
+                  <h3
+                    className="mt-4 text-2xl font-semibold"
+                    style={{
+                      background: 'linear-gradient(90deg, var(--brand-gradient-start), var(--brand-gradient-end))',
+                      WebkitBackgroundClip: 'text',
+                      color: 'transparent'
+                    }}
+                  >
+                    {previewBranding.copy?.headline || 'Brand headline'}
+                  </h3>
+                  <p className="mt-2 text-sm" style={{ color: 'var(--brand-text-muted)' }}>
+                    {previewBranding.copy?.subheadline || 'Subheadline preview text.'}
+                  </p>
+                  <div
+                    className="mt-4 rounded-2xl border p-4"
+                    style={{
+                      background: 'var(--brand-card-bg)',
+                      borderColor: 'var(--brand-card-border)'
+                    }}
+                  >
+                    <p className="text-xs font-semibold text-white/80">
+                      {previewBranding.copy?.emailLabel || 'Enter your email to get a magic link'}
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-3 rounded-xl px-4 py-2 text-xs font-semibold"
+                      style={{
+                        background: 'linear-gradient(90deg, var(--brand-btn-start), var(--brand-btn-end))',
+                        color: 'var(--brand-btn-text)'
+                      }}
+                    >
+                      {previewBranding.copy?.cta || 'Send magic link'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {domainStatus && (
                 <p className="mt-3 text-xs text-emerald-300">{domainStatus}</p>

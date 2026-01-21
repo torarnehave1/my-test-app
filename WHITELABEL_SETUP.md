@@ -211,3 +211,34 @@ Body example:
 - This uses **Workers Routes** instead of Workers custom domains.
 - This only works for domains in your Cloudflare account.
 - DNS + SSL can take a few minutes after adding a domain.
+
+---
+
+## 10) Branding JSON generator (OpenAI worker)
+
+There is a dedicated worker in `vegvisr-frontend/openai-worker` that can generate a branding JSON
+based on short user input.
+
+Endpoint:
+- `POST /branding/generate`
+
+Body example:
+```json
+{
+  "brandName": "Movemetime",
+  "appName": "Vegvisr Connect",
+  "audience": "Learning and onboarding",
+  "prompt": "Warm, optimistic, oceanic colors. Minimal, premium feel."
+}
+```
+
+Response:
+```json
+{ "success": true, "branding": { ... } }
+```
+
+Requirements:
+- `OPENAI_MODEL` optional
+- `DB` D1 binding with `user_api_keys` table
+- `ENCRYPTION_MASTER_KEY` set
+- Provide `userId` in the body or `x-user-id` header
