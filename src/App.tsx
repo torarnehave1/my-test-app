@@ -65,6 +65,7 @@ function App() {
   const [previewBranding, setPreviewBranding] = useState<BrandingPreview | null>(null);
   const [splitRatio, setSplitRatio] = useState(50);
   const [isResizing, setIsResizing] = useState(false);
+  const [previewNonce, setPreviewNonce] = useState(0);
   const splitRef = useRef<HTMLDivElement | null>(null);
   const [aiBrandName, setAiBrandName] = useState('');
   const [aiAudience, setAiAudience] = useState('');
@@ -491,10 +492,15 @@ function App() {
         throw new Error(data?.message || 'Failed to add domain.');
       }
       setDomainStatus(`Added ${data.domain}. DNS/SSL may take a few minutes.`);
-      setDomainInput('');
-      setLogoUrl('');
-      setSlogan('');
-      setBrandingJson('');
+      setDomainInput(data.domain || domainInput.trim());
+      if (data?.config?.logoUrl !== undefined) setLogoUrl(data.config.logoUrl || '');
+      if (data?.config?.slogan !== undefined) setSlogan(data.config.slogan || '');
+      if (data?.config?.branding !== undefined) {
+        setBrandingJson(
+          data.config.branding ? JSON.stringify(data.config.branding, null, 2) : brandingJson
+        );
+      }
+      setPreviewNonce((prev) => prev + 1);
       if (Array.isArray(data.domains)) {
         setDomainList(data.domains);
         refreshDomainStatuses(data.domains);
@@ -683,8 +689,9 @@ function App() {
                       </div>
                       {domainInput ? (
                         <iframe
+                          key={`${domainInput}-${previewNonce}`}
                           title="Brand live preview"
-                          src={`https://${domainInput}`}
+                          src={`https://${domainInput}?preview=${previewNonce}`}
                           className="h-[560px] w-full rounded-2xl border border-white/10 bg-slate-950"
                           sandbox="allow-same-origin allow-scripts allow-forms"
                         />
