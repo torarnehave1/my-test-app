@@ -19,3 +19,5 @@ npm run dev
 - Replace `src/assets/app-icon.png` and `src/assets/app-logo.png`.
 - Update app copy in `src/lib/i18n.ts`.
 - Replace the placeholder section in `src/App.tsx`.
+
+Endpoint: https://api.vegvisr.org/ai-translate
