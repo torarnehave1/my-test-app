@@ -2085,7 +2085,7 @@ function App() {
 
             {activeTab === 'translations' && (
               <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
-                <h2 className="text-2xl font-semibold text-white">Translations Editor</h2>
+                <h2 className="text-2xl font-semibold text-white">Translations Editor v1.0</h2>
                 <p className="mt-2 text-sm text-white/70">
                   Edit translation strings for all supported languages. Use AI to translate strings to other languages.
                 </p>
