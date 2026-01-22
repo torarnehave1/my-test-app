@@ -10,6 +10,7 @@ const MAGIC_BASE = 'https://cookie.vegvisr.org';
 const DASHBOARD_BASE = 'https://dashboard.vegvisr.org';
 const DOMAIN_API_BASE = 'https://test-domain-worker.torarnehave.workers.dev';
 const OPENAI_WORKER_BASE = 'https://openai.vegvisr.org';
+const API_WORKER_BASE = 'https://api.vegvisr.org';
 
 type BrandingPreview = {
   brand?: {
@@ -155,8 +156,174 @@ function App() {
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [brandApp, setBrandApp] = useState<string | null>(null);
   const [brandSlogan, setBrandSlogan] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'starter' | 'domains' | 'branding'>('starter');
+  const [activeTab, setActiveTab] = useState<'starter' | 'domains' | 'branding' | 'translations'>('starter');
   const isEditing = Boolean(domainInput && domainConfigs[domainInput]);
+
+  // Translations state
+  const [translationsData, setTranslationsData] = useState<Record<string, Record<string, unknown>>>({
+    en: {
+      home: {
+        title: 'Find your learning path with Vegvisr',
+        subtitle: 'Answer a few questions so we can tailor your onboarding experience.',
+        chooseAuth: 'Enter your email to get a magic link',
+        google: 'Continue with Google',
+        email: 'Continue with email',
+        emailPlaceholder: 'Enter your email address',
+        sendLink: 'Send magic link',
+        linkSent: 'Magic link sent. Check your inbox.',
+        language: 'Language'
+      },
+      auth: {
+        verifying: 'Verifying your access...',
+        success: 'You are verified. Redirecting to onboarding.',
+        failure: 'We could not verify that link. Request a new one.',
+        callbackError: 'We could not complete Google sign-in. Try again.'
+      },
+      onboarding: {
+        title: 'Your Vegvisr onboarding',
+        step: 'Step',
+        of: 'of',
+        next: 'Next step',
+        back: 'Back',
+        submit: 'Submit onboarding',
+        saving: 'Saving progress...',
+        saved: 'All changes saved',
+        successTitle: 'You are all set, You rock!',
+        successBody: 'We have received your onboarding responses. We will review them and get back to you soon.'
+      },
+      common: {
+        loading: 'Loading...',
+        emailLabel: 'Email address',
+        required: 'This field is required',
+        tryAgain: 'Try again',
+        signOut: 'Use a different email',
+        autosaveHint: 'Progress saves automatically.'
+      }
+    },
+    is: {
+      home: {
+        title: 'Finndu þína leið með Vegvisr',
+        subtitle: 'Svaraðu nokkrum spurningum svo við getum sérsniðið onboarding.',
+        chooseAuth: 'Sláðu inn netfangið til að fá töfrahlekk',
+        google: 'Halda áfram með Google',
+        email: 'Halda áfram með netfangi',
+        emailPlaceholder: 'Sláðu inn netfangið þitt',
+        sendLink: 'Senda töfrahlekk',
+        linkSent: 'Töfrahlekkur sendur. Athugaðu pósthólfið.',
+        language: 'Tungumál'
+      },
+      auth: {
+        verifying: 'Staðfestum aðgang...',
+        success: 'Þú ert staðfest(ur). Flyt á onboarding.',
+        failure: 'Við gátum ekki staðfest hlekkinn. Biddu um nýjan.',
+        callbackError: 'Google innskráning mistókst. Reyndu aftur.'
+      },
+      onboarding: {
+        title: 'Vegvisr onboarding',
+        step: 'Skref',
+        of: 'af',
+        next: 'Næsta skref',
+        back: 'Til baka',
+        submit: 'Senda onboarding',
+        saving: 'Vista framvindu...',
+        saved: 'Allt vistað',
+        successTitle: 'Allt klárt!',
+        successBody: 'Við höfum móttekið svörin þín.'
+      },
+      common: {
+        loading: 'Hleð...',
+        emailLabel: 'Netfang',
+        required: 'Þetta reit er nauðsynlegur',
+        tryAgain: 'Reyndu aftur',
+        signOut: 'Nota annað netfang',
+        autosaveHint: 'Framvinda vistast sjálfkrafa.'
+      }
+    },
+    no: {
+      home: {
+        title: 'Finn din læringsvei med Vegvisr',
+        subtitle: 'Svar på noen spørsmål så vi kan tilpasse onboardingen din.',
+        chooseAuth: 'Skriv inn e-posten din for å få en magisk lenke',
+        google: 'Fortsett med Google',
+        email: 'Fortsett med e-post',
+        emailPlaceholder: 'Skriv inn e-postadressen din',
+        sendLink: 'Send magisk lenke',
+        linkSent: 'Magisk lenke sendt. Sjekk innboksen.',
+        language: 'Språk'
+      },
+      auth: {
+        verifying: 'Verifiserer tilgangen din...',
+        success: 'Du er verifisert. Sender deg til onboarding.',
+        failure: 'Vi kunne ikke verifisere lenken. Be om en ny.',
+        callbackError: 'Vi kunne ikke fullføre Google-innloggingen. Prøv igjen.'
+      },
+      onboarding: {
+        title: 'Din Vegvisr onboarding',
+        step: 'Steg',
+        of: 'av',
+        next: 'Neste steg',
+        back: 'Tilbake',
+        submit: 'Send onboarding',
+        saving: 'Lagrer fremdrift...',
+        saved: 'Alt er lagret',
+        successTitle: 'Du er klar!',
+        successBody: 'Vi har mottatt svarene dine. Vi vil gå gjennom dem og komme tilbake til deg så snart vi kan.'
+      },
+      common: {
+        loading: 'Laster...',
+        emailLabel: 'E-postadresse',
+        required: 'Dette feltet er påkrevd',
+        tryAgain: 'Prøv igjen',
+        signOut: 'Bruk en annen e-post',
+        autosaveHint: 'Fremdriften lagres automatisk.'
+      }
+    },
+    nl: {
+      home: {
+        title: 'Vind je leerpad met Vegvisr',
+        subtitle: 'Beantwoord een paar vragen zodat we je onboarding kunnen afstemmen.',
+        chooseAuth: 'Vul je e-mailadres in om een magische link te krijgen',
+        google: 'Doorgaan met Google',
+        email: 'Doorgaan met e-mail',
+        emailPlaceholder: 'Vul je e-mailadres in',
+        sendLink: 'Stuur magische link',
+        linkSent: 'Magische link verzonden. Controleer je inbox.',
+        language: 'Taal'
+      },
+      auth: {
+        verifying: 'Je toegang wordt geverifieerd...',
+        success: 'Je bent geverifieerd. We sturen je naar de onboarding.',
+        failure: 'We konden die link niet verifiëren. Vraag een nieuwe aan.',
+        callbackError: 'We konden Google-aanmelding niet voltooien. Probeer opnieuw.'
+      },
+      onboarding: {
+        title: 'Jouw Vegvisr onboarding',
+        step: 'Stap',
+        of: 'van',
+        next: 'Volgende stap',
+        back: 'Terug',
+        submit: 'Onboarding verzenden',
+        saving: 'Voortgang opslaan...',
+        saved: 'Alles opgeslagen',
+        successTitle: 'Je bent er klaar voor!',
+        successBody: 'We hebben je antwoorden ontvangen. We bekijken ze en nemen zo snel mogelijk contact met je op.'
+      },
+      common: {
+        loading: 'Laden...',
+        emailLabel: 'E-mailadres',
+        required: 'Dit veld is verplicht',
+        tryAgain: 'Probeer opnieuw',
+        signOut: 'Gebruik een ander e-mailadres',
+        autosaveHint: 'Voortgang wordt automatisch opgeslagen.'
+      }
+    }
+  });
+  const [selectedTranslationLang, setSelectedTranslationLang] = useState<'en' | 'is' | 'no' | 'nl'>('en');
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ home: true, auth: false, onboarding: false, common: false });
+  const [aiTranslateLoading, setAiTranslateLoading] = useState(false);
+  const [aiTranslateStatus, setAiTranslateStatus] = useState('');
+  const [aiTranslateError, setAiTranslateError] = useState('');
+  const [selectedKeyForTranslation, setSelectedKeyForTranslation] = useState<string | null>(null);
 
   const updateBrandingDraft = (partial: BrandingPreview) => {
     lastBrandingUpdate.current = 'form';
@@ -1273,6 +1440,18 @@ function App() {
               >
                 Branding
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('translations')}
+                className={cx(
+                  'rounded-full px-5 py-2 text-sm font-medium transition',
+                  activeTab === 'translations'
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/60 hover:text-white/80'
+                )}
+              >
+                Translations
+              </button>
             </div>
 
             {activeTab === 'starter' && (
@@ -1900,6 +2079,227 @@ function App() {
                   >
                     Refresh status
                   </button>
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'translations' && (
+              <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
+                <h2 className="text-2xl font-semibold text-white">Translations Editor</h2>
+                <p className="mt-2 text-sm text-white/70">
+                  Edit translation strings for all supported languages. Use AI to translate strings to other languages.
+                </p>
+
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <div className="text-xs uppercase tracking-[0.3em] text-white/60">Select language:</div>
+                  {(['en', 'is', 'no', 'nl'] as const).map((lang) => (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => setSelectedTranslationLang(lang)}
+                      className={cx(
+                        'rounded-full px-4 py-2 text-sm font-medium transition',
+                        selectedTranslationLang === lang
+                          ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                          : 'border border-white/10 text-white/60 hover:text-white/80 hover:border-white/30'
+                      )}
+                    >
+                      {lang === 'en' ? 'English' : lang === 'is' ? 'Icelandic' : lang === 'no' ? 'Norwegian' : 'Dutch'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-6 space-y-4">
+                  {Object.entries(translationsData[selectedTranslationLang] || {}).map(([sectionKey, sectionValue]) => (
+                    <div key={sectionKey} className="rounded-2xl border border-white/10 bg-slate-900/40">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSections(prev => ({ ...prev, [sectionKey]: !prev[sectionKey] }))}
+                        className="flex w-full items-center justify-between px-5 py-4 text-left"
+                      >
+                        <span className="text-sm font-semibold uppercase tracking-[0.2em] text-white/80">{sectionKey}</span>
+                        <span className="text-white/40">{expandedSections[sectionKey] ? '−' : '+'}</span>
+                      </button>
+
+                      {expandedSections[sectionKey] && typeof sectionValue === 'object' && sectionValue !== null && (
+                        <div className="border-t border-white/10 px-5 py-4">
+                          <div className="space-y-3">
+                            {Object.entries(sectionValue as Record<string, unknown>).map(([key, value]) => {
+                              const fullKey = `${sectionKey}.${key}`;
+                              const isSelected = selectedKeyForTranslation === fullKey;
+
+                              return (
+                                <div key={key} className="rounded-xl border border-white/10 bg-slate-900/60 p-4">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                      <div className="text-xs font-medium text-white/50 mb-2">{key}</div>
+                                      <input
+                                        type="text"
+                                        title={`Edit ${key} translation`}
+                                        value={typeof value === 'string' ? value : JSON.stringify(value)}
+                                        onChange={(e) => {
+                                          setTranslationsData(prev => ({
+                                            ...prev,
+                                            [selectedTranslationLang]: {
+                                              ...prev[selectedTranslationLang],
+                                              [sectionKey]: {
+                                                ...(prev[selectedTranslationLang]?.[sectionKey] as Record<string, unknown> || {}),
+                                                [key]: e.target.value
+                                              }
+                                            }
+                                          }));
+                                        }}
+                                        className="w-full rounded-lg border border-white/10 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                                      />
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedKeyForTranslation(isSelected ? null : fullKey)}
+                                      className={cx(
+                                        'rounded-lg px-3 py-2 text-xs font-medium transition',
+                                        isSelected
+                                          ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                                          : 'border border-white/10 text-white/60 hover:text-white/80 hover:border-white/30'
+                                      )}
+                                    >
+                                      AI Translate
+                                    </button>
+                                  </div>
+
+                                  {isSelected && (
+                                    <div className="mt-4 rounded-lg border border-sky-500/20 bg-sky-500/5 p-4">
+                                      <div className="text-xs font-medium text-sky-300/80 mb-3">Translate to other languages</div>
+                                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                        {(['en', 'is', 'no', 'nl'] as const)
+                                          .filter(lang => lang !== selectedTranslationLang)
+                                          .map((targetLang) => {
+                                            const targetValue = (translationsData[targetLang]?.[sectionKey] as Record<string, unknown>)?.[key];
+                                            return (
+                                              <div key={targetLang} className="rounded-lg border border-white/10 bg-slate-900/60 p-3">
+                                                <div className="flex items-center justify-between mb-2">
+                                                  <span className="text-xs font-medium text-white/60">
+                                                    {targetLang === 'en' ? 'English' : targetLang === 'is' ? 'Icelandic' : targetLang === 'no' ? 'Norwegian' : 'Dutch'}
+                                                  </span>
+                                                  <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                      if (!authUser?.userId) {
+                                                        setAiTranslateError('You must be logged in to use AI translation.');
+                                                        return;
+                                                      }
+                                                      setAiTranslateLoading(true);
+                                                      setAiTranslateError('');
+                                                      setAiTranslateStatus('');
+                                                      try {
+                                                        const sourceLangName = selectedTranslationLang === 'en' ? 'English' : selectedTranslationLang === 'is' ? 'Icelandic' : selectedTranslationLang === 'no' ? 'Norwegian' : 'Dutch';
+                                                        const targetLangName = targetLang === 'en' ? 'English' : targetLang === 'is' ? 'Icelandic' : targetLang === 'no' ? 'Norwegian' : 'Dutch';
+
+                                                        const response = await fetch(`${API_WORKER_BASE}/ai-translate`, {
+                                                          method: 'POST',
+                                                          headers: {
+                                                            'Content-Type': 'application/json'
+                                                          },
+                                                          body: JSON.stringify({
+                                                            text: value,
+                                                            targetLanguage: targetLang,
+                                                            prompt: `Translate the following UI string from ${sourceLangName} to ${targetLangName}. This is a "${key}" field in the "${sectionKey}" section of a learning platform. Keep it concise and natural. Only return the translated text, nothing else.
+
+Text to translate:
+${value}`
+                                                          })
+                                                        });
+                                                        const data = await response.json();
+                                                        if (!response.ok || !data?.success) {
+                                                          throw new Error(data?.message || 'Translation failed');
+                                                        }
+                                                        setTranslationsData(prev => ({
+                                                          ...prev,
+                                                          [targetLang]: {
+                                                            ...prev[targetLang],
+                                                            [sectionKey]: {
+                                                              ...(prev[targetLang]?.[sectionKey] as Record<string, unknown> || {}),
+                                                              [key]: data.translation
+                                                            }
+                                                          }
+                                                        }));
+                                                        setAiTranslateStatus(`Translated to ${targetLangName}`);
+                                                      } catch (err) {
+                                                        setAiTranslateError(err instanceof Error ? err.message : 'Translation failed');
+                                                      } finally {
+                                                        setAiTranslateLoading(false);
+                                                      }
+                                                    }}
+                                                    disabled={aiTranslateLoading}
+                                                    className="rounded px-2 py-1 text-[10px] font-medium bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 disabled:opacity-50"
+                                                  >
+                                                    {aiTranslateLoading ? '...' : 'Translate'}
+                                                  </button>
+                                                </div>
+                                                <input
+                                                  type="text"
+                                                  value={typeof targetValue === 'string' ? targetValue : (targetValue ? JSON.stringify(targetValue) : '')}
+                                                  onChange={(e) => {
+                                                    setTranslationsData(prev => ({
+                                                      ...prev,
+                                                      [targetLang]: {
+                                                        ...prev[targetLang],
+                                                        [sectionKey]: {
+                                                          ...(prev[targetLang]?.[sectionKey] as Record<string, unknown> || {}),
+                                                          [key]: e.target.value
+                                                        }
+                                                      }
+                                                    }));
+                                                  }}
+                                                  placeholder={`${targetLang === 'en' ? 'English' : targetLang === 'is' ? 'Icelandic' : targetLang === 'no' ? 'Norwegian' : 'Dutch'} translation`}
+                                                  className="w-full rounded border border-white/10 bg-slate-800/60 px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-sky-500/60"
+                                                />
+                                              </div>
+                                            );
+                                          })}
+                                      </div>
+                                      {aiTranslateStatus && <p className="mt-2 text-xs text-emerald-300">{aiTranslateStatus}</p>}
+                                      {aiTranslateError && <p className="mt-2 text-xs text-rose-300">{aiTranslateError}</p>}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const json = JSON.stringify(translationsData, null, 2);
+                      navigator.clipboard.writeText(json);
+                      setAiTranslateStatus('Translations copied to clipboard');
+                      setTimeout(() => setAiTranslateStatus(''), 3000);
+                    }}
+                    className="rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/30"
+                  >
+                    Copy All as JSON
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const blob = new Blob([JSON.stringify(translationsData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'translations.json';
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white/70 hover:border-white/30 hover:text-white"
+                  >
+                    Download JSON
+                  </button>
+                  {aiTranslateStatus && <span className="text-xs text-emerald-300">{aiTranslateStatus}</span>}
                 </div>
               </section>
             )}
