@@ -14,6 +14,75 @@ export default {
     const url = new URL(request.url);
     let targetOrigin = defaultOrigin;
 
+    const jsonResponse = (payload, status = 200) => {
+      return new Response(JSON.stringify(payload), {
+        status,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        }
+      });
+    };
+
+    if (url.pathname === '/__html/publish') {
+      if (request.method === 'OPTIONS') {
+        return jsonResponse({ ok: true });
+      }
+      if (request.method !== 'POST') {
+        return jsonResponse({ ok: false, error: 'Method not allowed' }, 405);
+      }
+      if (!env.HTML_PAGES) {
+        return jsonResponse({ ok: false, error: 'HTML_PAGES binding missing' }, 500);
+      }
+
+      let payload = null;
+      try {
+        payload = await request.json();
+      } catch {
+        return jsonResponse({ ok: false, error: 'Invalid JSON body' }, 400);
+      }
+
+      const hostname = String(payload?.hostname || '').trim().toLowerCase();
+      const html = String(payload?.html || '');
+      if (!hostname || !html) {
+        return jsonResponse({ ok: false, error: 'hostname and html are required' }, 400);
+      }
+
+      await env.HTML_PAGES.put(`html:${hostname}`, html);
+      return jsonResponse({ ok: true, hostname });
+    }
+
+    const maybeServeHtmlPage = async () => {
+      if (url.pathname === '/branding.json') return null;
+      if (!env.HTML_PAGES) return null;
+
+      const keys = [`html:${url.hostname}`];
+      if (url.hostname.startsWith('www.')) {
+        keys.push(`html:${url.hostname.replace(/^www\./, '')}`);
+      }
+
+      for (const key of keys) {
+        const html = await env.HTML_PAGES.get(key);
+        if (html) {
+          return new Response(html, {
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600'
+            }
+          });
+        }
+      }
+
+      return null;
+    };
+
+    const htmlResponse = await maybeServeHtmlPage();
+    if (htmlResponse) {
+      return htmlResponse;
+    }
+
     const buildBrandingResponse = async () => {
       const cache = caches.default;
       const cacheKey = new Request(url.toString(), { method: 'GET' });
