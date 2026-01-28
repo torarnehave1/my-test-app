@@ -46,12 +46,42 @@ export default {
 
       const hostname = String(payload?.hostname || '').trim().toLowerCase();
       const html = String(payload?.html || '');
+      const overwrite = Boolean(payload?.overwrite);
       if (!hostname || !html) {
         return jsonResponse({ ok: false, error: 'hostname and html are required' }, 400);
       }
 
-      await env.HTML_PAGES.put(`html:${hostname}`, html);
+      const key = `html:${hostname}`;
+      const existing = await env.HTML_PAGES.get(key);
+      if (existing && !overwrite) {
+        return jsonResponse(
+          { ok: false, error: 'Content already exists', exists: true, hostname },
+          409,
+        );
+      }
+
+      await env.HTML_PAGES.put(key, html);
       return jsonResponse({ ok: true, hostname });
+    }
+
+    if (url.pathname === '/__html/check') {
+      if (request.method === 'OPTIONS') {
+        return jsonResponse({ ok: true });
+      }
+      if (request.method !== 'GET') {
+        return jsonResponse({ ok: false, error: 'Method not allowed' }, 405);
+      }
+      if (!env.HTML_PAGES) {
+        return jsonResponse({ ok: false, error: 'HTML_PAGES binding missing' }, 500);
+      }
+
+      const hostname = String(url.searchParams.get('hostname') || '').trim().toLowerCase();
+      if (!hostname) {
+        return jsonResponse({ ok: false, error: 'hostname is required' }, 400);
+      }
+
+      const existing = await env.HTML_PAGES.get(`html:${hostname}`);
+      return jsonResponse({ ok: true, hostname, exists: Boolean(existing) });
     }
 
     const maybeServeHtmlPage = async () => {
