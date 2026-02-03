@@ -230,7 +230,17 @@ export default {
             token: CF_API_TOKEN,
             script: TARGET_WORKER_NAME
           });
-          const config = await readBrandConfig(env, domain);
+          const config = await readBrandConfig(env, domain) || {};
+
+          // Also fetch HTML from HTML_PAGES if available
+          if (env.HTML_PAGES) {
+            const htmlKey = `html:${domain}`;
+            const htmlContent = await env.HTML_PAGES.get(htmlKey);
+            if (htmlContent) {
+              config.htmlContent = htmlContent;
+            }
+          }
+
           return jsonResponse({ success: true, status, config });
         }
 
@@ -244,10 +254,23 @@ export default {
           await writeDomainIndex(env, domains);
         }
         const configs = await Promise.all(
-          domains.map(async (domain) => ({
-            domain,
-            config: await readBrandConfig(env, domain)
-          }))
+          domains.map(async (domain) => {
+            const config = await readBrandConfig(env, domain) || {};
+
+            // Also fetch HTML from HTML_PAGES if available
+            if (env.HTML_PAGES) {
+              const htmlKey = `html:${domain}`;
+              const htmlContent = await env.HTML_PAGES.get(htmlKey);
+              if (htmlContent) {
+                config.htmlContent = htmlContent;
+              }
+            }
+
+            return {
+              domain,
+              config
+            };
+          })
         );
         return jsonResponse({ success: true, domains, configs });
       } catch (error) {

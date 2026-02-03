@@ -5,3 +5,8 @@ compatibility_date = "2025-01-15"
 [[kv_namespaces]]
 binding = "BRAND_CONFIG"
 id = "18348b781fd64e20bfd9694a06c3020d"
+
+[[kv_namespaces]]
+binding = "HTML_PAGES"
+id = "2b8ce05731454bcf82b790b91392bee8"
+preview_id = "4dc660d5f7714d1b8cea9073a2aa01b3"

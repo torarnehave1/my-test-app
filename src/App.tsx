@@ -2010,7 +2010,7 @@ function App() {
               )}
 
               {/* HTML CONTENT EDITOR SECTION */}
-              {previewBranding && (
+              {domainInput && (
                 <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                     📄 Published HTML Content
