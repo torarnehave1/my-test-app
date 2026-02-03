@@ -99,6 +99,9 @@ function App() {
   const [htmlSelectedPointId, setHtmlSelectedPointId] = useState<string | null>(null);
   const [htmlSplitRatio] = useState(50);
   const htmlSplitRef = useRef<HTMLDivElement | null>(null);
+  const [htmlElementSelector, setHtmlElementSelector] = useState(false);
+  const [selectedElement, setSelectedElement] = useState<{ selector: string; tag: string } | null>(null);
+  const [elementStyles, setElementStyles] = useState<Record<string, string>>({});
   const [previewBranding, setPreviewBranding] = useState<BrandingPreview | null>(null);
   const [brandingDraft, setBrandingDraft] = useState<BrandingPreview>({
     brand: {},
@@ -2463,6 +2466,26 @@ ${value}`
                       </div>
 
                       {/* HTML PREVIEW PANE */}
+                      <div className="mb-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setHtmlElementSelector(!htmlElementSelector)}
+                          className={cx(
+                            'rounded-lg px-3 py-2 text-xs font-semibold transition',
+                            htmlElementSelector
+                              ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                              : 'border border-white/10 text-white/60 hover:text-white/80'
+                          )}
+                        >
+                          {htmlElementSelector ? '✓ Click to select element' : '👆 Enable Element Selector'}
+                        </button>
+                        {selectedElement && (
+                          <span className="text-xs text-white/60">
+                            Selected: <span className="text-sky-300 font-mono">{selectedElement.tag}</span>
+                          </span>
+                        )}
+                      </div>
+
                       <div
                         className="rounded-3xl border border-white/10 bg-white/5 p-6 overflow-auto"
                         style={{
@@ -2482,13 +2505,66 @@ ${value}`
                                 `radial-gradient(circle at ${point.x}% ${point.y}%, ${point.color} 0%, transparent 60%)`
                             )
                             .join(', '),
-                          color: 'var(--brand-text-primary)'
+                          color: 'var(--brand-text-primary)',
+                          cursor: htmlElementSelector ? 'crosshair' : 'auto'
                         } as Record<string, string>}
                       >
                         <iframe
                           title="HTML content preview"
-                          srcDoc={`<!DOCTYPE html><html><head><style>body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:20px;color:var(--brand-text-primary);}</style></head><body>${htmlContent || '<p style="color: var(--brand-text-muted);">No HTML content</p>'}</body></html>`}
+                          srcDoc={`<!DOCTYPE html><html><head><style>
+                            body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:20px;color:var(--brand-text-primary);}
+                            [data-selectable]:hover { outline: 2px solid rgb(59, 130, 246) !important; outline-offset: 2px; }
+                            [data-selected] { outline: 3px solid rgb(34, 197, 94) !important; outline-offset: 2px; background-color: rgba(34, 197, 94, 0.1) !important; }
+                          </style></head><body>${htmlContent || '<p style="color: var(--brand-text-muted);">No HTML content</p>'}</body></html>`}
                           className="w-full h-full border-0 rounded-2xl bg-white/5"
+                          ref={(iframe) => {
+                            if (iframe && iframe.contentDocument && htmlElementSelector) {
+                              const doc = iframe.contentDocument;
+                              // Make all elements clickable when selector is on
+                              const elements = doc.querySelectorAll('*');
+                              elements.forEach((el: Element) => {
+                                (el as HTMLElement).setAttribute('data-selectable', 'true');
+                                (el as HTMLElement).style.cursor = 'pointer';
+
+                                const clickHandler = (e: MouseEvent) => {
+                                  if (!htmlElementSelector) return;
+                                  e.preventDefault();
+                                  e.stopPropagation();
+
+                                  // Remove previous selection
+                                  doc.querySelectorAll('[data-selected]').forEach(el => {
+                                    el.removeAttribute('data-selected');
+                                  });
+
+                                  // Select new element
+                                  const target = e.target as HTMLElement;
+                                  target.setAttribute('data-selected', 'true');
+
+                                  // Get element info
+                                  const tag = target.tagName.toLowerCase();
+                                  const className = target.className;
+                                  const id = target.id;
+
+                                  let selector = tag;
+                                  if (id) selector += `#${id}`;
+                                  if (className) selector += `.${className.split(' ').join('.')}`;
+
+                                  setSelectedElement({ selector, tag });
+
+                                  // Get current styles
+                                  const computedStyle = window.getComputedStyle(target);
+                                  setElementStyles({
+                                    backgroundColor: computedStyle.backgroundColor,
+                                    color: computedStyle.color,
+                                    fontSize: computedStyle.fontSize,
+                                    fontWeight: computedStyle.fontWeight
+                                  });
+                                };
+
+                                (el as HTMLElement).addEventListener('click', clickHandler);
+                              });
+                            }
+                          }}
                           style={{
                             filter: 'invert(0)'
                           }}
@@ -2545,6 +2621,69 @@ ${value}`
                       {/* STYLING SECTION */}
                       <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
                         <h3 className="text-sm font-semibold text-white mb-4">🎨 Style HTML Page</h3>
+
+                        {/* ELEMENT-SPECIFIC STYLING */}
+                        {selectedElement && (
+                          <div className="mb-6 rounded-lg border border-sky-500/20 bg-sky-500/5 p-4">
+                            <div className="text-xs font-semibold text-sky-300 mb-3">
+                              ✏️ Style Selected Element: <span className="font-mono">{selectedElement.tag}</span>
+                            </div>
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3">
+                                <label className="text-xs font-medium text-white/60 flex-1">Background Color</label>
+                                <input
+                                  type="color"
+                                  title="Select element background color"
+                                  value={elementStyles.backgroundColor || '#ffffff'}
+                                  onChange={(event) => {
+                                    setElementStyles(prev => ({
+                                      ...prev,
+                                      backgroundColor: event.target.value
+                                    }));
+                                    // Apply to HTML content - inject style tag
+                                    const newHtml = htmlContent.replace(
+                                      /<\/head>/i,
+                                      `<style>${selectedElement.selector}{background-color:${event.target.value}!important;}</style></head>`
+                                    );
+                                    setHtmlContent(newHtml);
+                                  }}
+                                  className="h-8 w-12 cursor-pointer rounded border border-white/20"
+                                />
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <label className="text-xs font-medium text-white/60 flex-1">Text Color</label>
+                                <input
+                                  type="color"
+                                  title="Select element text color"
+                                  value={elementStyles.color || '#ffffff'}
+                                  onChange={(event) => {
+                                    setElementStyles(prev => ({
+                                      ...prev,
+                                      color: event.target.value
+                                    }));
+                                    // Apply to HTML content - inject style tag
+                                    const newHtml = htmlContent.replace(
+                                      /<\/head>/i,
+                                      `<style>${selectedElement.selector}{color:${event.target.value}!important;}</style></head>`
+                                    );
+                                    setHtmlContent(newHtml);
+                                  }}
+                                  className="h-8 w-12 cursor-pointer rounded border border-white/20"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedElement(null);
+                                  setElementStyles({});
+                                }}
+                                className="w-full rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-white/60 hover:text-white/80"
+                              >
+                                Clear Selection
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
                         {/* GRADIENT POINT EDITOR */}
                         <div className="mb-4">
