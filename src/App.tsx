@@ -85,6 +85,20 @@ function App() {
   const [htmlLoading, setHtmlLoading] = useState(false);
   const [htmlError, setHtmlError] = useState('');
   const [htmlStatus, setHtmlStatus] = useState('');
+  const [htmlStyling, setHtmlStyling] = useState<BrandingPreview>({
+    theme: {
+      background: { points: [
+        { id: '1', x: 20, y: 20, color: '#3b82f6' },
+        { id: '2', x: 80, y: 80, color: '#8b5cf6' }
+      ]},
+      text: { primary: '#e5e7eb', muted: 'rgba(229,231,235,0.7)', headlineGradient: ['#3b82f6', '#8b5cf6'] },
+      card: { bg: 'rgba(255,255,255,0.12)', border: 'rgba(255,255,255,0.2)' },
+      button: { bgGradient: ['#3b82f6', '#8b5cf6'], text: '#ffffff' }
+    }
+  });
+  const [htmlSelectedPointId, setHtmlSelectedPointId] = useState<string | null>(null);
+  const [htmlSplitRatio] = useState(50);
+  const htmlSplitRef = useRef<HTMLDivElement | null>(null);
   const [previewBranding, setPreviewBranding] = useState<BrandingPreview | null>(null);
   const [brandingDraft, setBrandingDraft] = useState<BrandingPreview>({
     brand: {},
@@ -160,7 +174,7 @@ function App() {
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [brandApp, setBrandApp] = useState<string | null>(null);
   const [brandSlogan, setBrandSlogan] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'starter' | 'domains' | 'branding' | 'translations'>('starter');
+  const [activeTab, setActiveTab] = useState<'starter' | 'domains' | 'branding' | 'html-editor' | 'translations'>('starter');
   const isEditing = Boolean(domainInput && domainConfigs[domainInput]);
 
   // Translations state
@@ -1472,6 +1486,18 @@ function App() {
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab('html-editor')}
+                className={cx(
+                  'rounded-full px-5 py-2 text-sm font-medium transition',
+                  activeTab === 'html-editor'
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/60 hover:text-white/80'
+                )}
+              >
+                HTML Editor
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab('translations')}
                 className={cx(
                   'rounded-full px-5 py-2 text-sm font-medium transition',
@@ -2401,6 +2427,286 @@ ${value}`
                   </button>
                   {aiTranslateStatus && <span className="text-xs text-emerald-300">{aiTranslateStatus}</span>}
                 </div>
+              </section>
+            )}
+
+            {activeTab === 'html-editor' && (
+              <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
+                <h2 className="text-2xl font-semibold text-white">
+                  {domainInput ? `Edit HTML: ${domainInput}` : 'Select a domain to edit HTML'}
+                </h2>
+                <p className="mt-2 text-sm text-white/70">
+                  {domainInput
+                    ? 'Edit and style published HTML content. Customize gradients, colors, and typography.'
+                    : 'Go to Domains tab and click Edit on a domain to edit its HTML content.'}
+                </p>
+
+                {!domainInput ? (
+                  <div className="mt-8 rounded-2xl border border-white/10 bg-slate-900/40 px-8 py-12 text-center">
+                    <div className="text-xl font-semibold text-white/60">No domain selected</div>
+                    <p className="mt-2 text-sm text-white/40">Click Edit on a domain in the Domains tab to edit HTML</p>
+                  </div>
+                ) : htmlLoading ? (
+                  <div className="mt-8 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-slate-900/40 py-12">
+                    <div className="h-4 w-4 animate-spin rounded-full border border-white/30 border-t-white"></div>
+                    <span className="text-sm text-white/60">Loading HTML content...</span>
+                  </div>
+                ) : (
+                  <div ref={htmlSplitRef} className="mt-8 flex flex-col gap-6 lg:flex-row lg:gap-0">
+                    {/* LEFT SIDE: HTML PREVIEW WITH STYLING */}
+                    <div
+                      className="lg:pr-6"
+                      style={{ flexBasis: `${htmlSplitRatio}%` }}
+                    >
+                      <div className="text-xs uppercase tracking-[0.3em] text-white/60 mb-4">
+                        HTML Preview
+                      </div>
+
+                      {/* HTML PREVIEW PANE */}
+                      <div
+                        className="rounded-3xl border border-white/10 bg-white/5 p-6 overflow-auto"
+                        style={{
+                          height: '600px',
+                          '--brand-text-primary': htmlStyling.theme?.text?.primary || '#e5e7eb',
+                          '--brand-text-muted': htmlStyling.theme?.text?.muted || 'rgba(229,231,235,0.7)',
+                          '--brand-gradient-start': htmlStyling.theme?.text?.headlineGradient?.[0] || '#3b82f6',
+                          '--brand-gradient-end': htmlStyling.theme?.text?.headlineGradient?.[1] || '#8b5cf6',
+                          '--brand-card-bg': htmlStyling.theme?.card?.bg || 'rgba(255,255,255,0.12)',
+                          '--brand-card-border': htmlStyling.theme?.card?.border || 'rgba(255,255,255,0.2)',
+                          '--brand-btn-start': htmlStyling.theme?.button?.bgGradient?.[0] || '#3b82f6',
+                          '--brand-btn-end': htmlStyling.theme?.button?.bgGradient?.[1] || '#8b5cf6',
+                          '--brand-btn-text': htmlStyling.theme?.button?.text || '#ffffff',
+                          background: (htmlStyling.theme?.background?.points || [])
+                            .map(
+                              (point) =>
+                                `radial-gradient(circle at ${point.x}% ${point.y}%, ${point.color} 0%, transparent 60%)`
+                            )
+                            .join(', '),
+                          color: 'var(--brand-text-primary)'
+                        } as Record<string, string>}
+                      >
+                        <iframe
+                          title="HTML content preview"
+                          srcDoc={`<!DOCTYPE html><html><head><style>body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:20px;color:var(--brand-text-primary);}</style></head><body>${htmlContent || '<p style="color: var(--brand-text-muted);">No HTML content</p>'}</body></html>`}
+                          className="w-full h-full border-0 rounded-2xl bg-white/5"
+                          style={{
+                            filter: 'invert(0)'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* RIGHT SIDE: EDITOR AND STYLING CONTROLS */}
+                    <div
+                      className="lg:pl-6 lg:border-l lg:border-white/10"
+                      style={{ flexBasis: `${100 - htmlSplitRatio}%` }}
+                    >
+                      <div className="text-xs uppercase tracking-[0.3em] text-white/60 mb-4">
+                        HTML Content & Styling
+                      </div>
+
+                      {/* HTML TEXTAREA */}
+                      <textarea
+                        value={htmlContent}
+                        onChange={(event) => setHtmlContent(event.target.value)}
+                        placeholder="Paste your HTML content here..."
+                        className="w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 font-mono text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                        style={{ height: '200px', resize: 'vertical' }}
+                      />
+
+                      {/* PREVIEW AND SAVE BUTTONS */}
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (htmlContent) {
+                              window.open(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`, '_blank');
+                            } else {
+                              alert('No HTML content to preview');
+                            }
+                          }}
+                          className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-white/80 hover:border-white/30 hover:bg-white/5"
+                        >
+                          👁️ Preview
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAddDomain}
+                          disabled={domainLoading}
+                          className="rounded-xl bg-gradient-to-r from-sky-500 to-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-sky-500/30"
+                        >
+                          {domainLoading ? 'Saving...' : '💾 Save HTML'}
+                        </button>
+                      </div>
+
+                      {htmlError && <p className="mt-2 text-xs text-rose-300">{htmlError}</p>}
+                      {htmlStatus && <p className="mt-2 text-xs text-emerald-300">{htmlStatus}</p>}
+
+                      {/* STYLING SECTION */}
+                      <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+                        <h3 className="text-sm font-semibold text-white mb-4">🎨 Style HTML Page</h3>
+
+                        {/* GRADIENT POINT EDITOR */}
+                        <div className="mb-4">
+                          <div className="text-xs uppercase tracking-[0.2em] text-white/60 mb-3">
+                            Gradient Points
+                          </div>
+                          <div className="relative h-32 w-full rounded-xl border border-white/10 bg-slate-950/60 overflow-hidden">
+                            {(htmlStyling.theme?.background?.points || []).map((point) => (
+                              <button
+                                key={point.id}
+                                type="button"
+                                onMouseDown={(event) => {
+                                  event.preventDefault();
+                                  setHtmlSelectedPointId(point.id);
+                                  const container = event.currentTarget.parentElement;
+                                  if (!container) return;
+                                  const onMove = (moveEvent: MouseEvent) => {
+                                    const rect = container.getBoundingClientRect();
+                                    const x = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+                                    const y = ((moveEvent.clientY - rect.top) / rect.height) * 100;
+                                    setHtmlStyling(prev => ({
+                                      ...prev,
+                                      theme: {
+                                        ...prev.theme,
+                                        background: {
+                                          points: (prev.theme?.background?.points || []).map(p =>
+                                            p.id === point.id
+                                              ? {
+                                                  ...p,
+                                                  x: Math.min(100, Math.max(0, x)),
+                                                  y: Math.min(100, Math.max(0, y))
+                                                }
+                                              : p
+                                          )
+                                        }
+                                      }
+                                    }));
+                                  };
+                                  const onUp = () => {
+                                    window.removeEventListener('mousemove', onMove);
+                                    window.removeEventListener('mouseup', onUp);
+                                  };
+                                  window.addEventListener('mousemove', onMove);
+                                  window.addEventListener('mouseup', onUp);
+                                }}
+                                className={`absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 shadow cursor-move ${
+                                  htmlSelectedPointId === point.id ? 'ring-2 ring-white' : 'ring-1 ring-white/30'
+                                }`}
+                                style={{
+                                  left: `${point.x}%`,
+                                  top: `${point.y}%`,
+                                  backgroundColor: point.color
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* COLOR PICKER FOR SELECTED POINT */}
+                        {htmlSelectedPointId && (
+                          <div className="mb-4 flex items-center gap-3 rounded-lg border border-white/10 bg-slate-950/80 px-3 py-3">
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-white/50 flex-1">
+                              Point Color
+                            </div>
+                            <input
+                              type="color"
+                              title="Select gradient point color"
+                              value={
+                                (htmlStyling.theme?.background?.points || []).find(
+                                  (point) => point.id === htmlSelectedPointId
+                                )?.color || '#3b82f6'
+                              }
+                              onChange={(event) =>
+                                setHtmlStyling(prev => ({
+                                  ...prev,
+                                  theme: {
+                                    ...prev.theme,
+                                    background: {
+                                      points: (prev.theme?.background?.points || []).map(p =>
+                                        p.id === htmlSelectedPointId
+                                          ? { ...p, color: event.target.value }
+                                          : p
+                                      )
+                                    }
+                                  }
+                                }))
+                              }
+                              className="h-8 w-12 cursor-pointer rounded border border-white/20"
+                            />
+                          </div>
+                        )}
+
+                        {/* TEXT COLOR CONTROLS */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <label className="text-xs font-medium text-white/60 flex-1">Primary Text</label>
+                            <input
+                              type="color"
+                              title="Select primary text color"
+                              value={htmlStyling.theme?.text?.primary || '#e5e7eb'}
+                              onChange={(event) =>
+                                setHtmlStyling(prev => ({
+                                  ...prev,
+                                  theme: {
+                                    ...prev.theme,
+                                    text: {
+                                      ...prev.theme?.text,
+                                      primary: event.target.value
+                                    }
+                                  }
+                                }))
+                              }
+                              className="h-8 w-12 cursor-pointer rounded border border-white/20"
+                            />
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <label className="text-xs font-medium text-white/60 flex-1">Headline Gradient Start</label>
+                            <input
+                              type="color"
+                              title="Select headline gradient start color"
+                              value={htmlStyling.theme?.text?.headlineGradient?.[0] || '#3b82f6'}
+                              onChange={(event) =>
+                                setHtmlStyling(prev => ({
+                                  ...prev,
+                                  theme: {
+                                    ...prev.theme,
+                                    text: {
+                                      ...prev.theme?.text,
+                                      headlineGradient: [event.target.value, htmlStyling.theme?.text?.headlineGradient?.[1] || '#8b5cf6']
+                                    }
+                                  }
+                                }))
+                              }
+                              className="h-8 w-12 cursor-pointer rounded border border-white/20"
+                            />
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <label className="text-xs font-medium text-white/60 flex-1">Headline Gradient End</label>
+                            <input
+                              type="color"
+                              title="Select headline gradient end color"
+                              value={htmlStyling.theme?.text?.headlineGradient?.[1] || '#8b5cf6'}
+                              onChange={(event) =>
+                                setHtmlStyling(prev => ({
+                                  ...prev,
+                                  theme: {
+                                    ...prev.theme,
+                                    text: {
+                                      ...prev.theme?.text,
+                                      headlineGradient: [htmlStyling.theme?.text?.headlineGradient?.[0] || '#3b82f6', event.target.value]
+                                    }
+                                  }
+                                }))
+                              }
+                              className="h-8 w-12 cursor-pointer rounded border border-white/20"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </section>
             )}
           </main>
