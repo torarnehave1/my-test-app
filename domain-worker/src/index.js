@@ -271,6 +271,7 @@ export default {
     const logoUrl = typeof body?.logoUrl === 'string' ? body.logoUrl.trim() : '';
     const slogan = typeof body?.slogan === 'string' ? body.slogan.trim() : '';
     const branding = typeof body?.branding === 'object' && body.branding !== null ? body.branding : null;
+    const htmlContent = typeof body?.htmlContent === 'string' ? body.htmlContent : null;
     const targetApp = normalizeApp(targetAppRaw || '');
     if (!domain || !isValidDomain(domain)) {
       return jsonResponse({ success: false, message: 'Please provide a valid domain.' }, 400);
@@ -307,10 +308,18 @@ export default {
         logoUrl,
         slogan,
         branding: branding || existingConfig?.branding || null,
+        htmlContent: htmlContent || existingConfig?.htmlContent || null,
         updatedAt: now,
         createdAt: existingConfig?.createdAt || now
       };
       await writeBrandConfig(env, domain, config);
+
+      // If HTML content provided, also write to proxy-worker KV if available
+      if (htmlContent && env.HTML_PAGES) {
+        const key = `html:${domain}`;
+        await env.HTML_PAGES.put(key, htmlContent);
+        console.log(`[domain-worker] HTML saved to KV: ${key}`);
+      }
 
       step = 'list-domains';
       const domains = await readDomainIndex(env);

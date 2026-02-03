@@ -81,6 +81,10 @@ function App() {
   const [slogan, setSlogan] = useState('');
   const [brandingJson, setBrandingJson] = useState('');
   const [brandingJsonError, setBrandingJsonError] = useState('');
+  const [htmlContent, setHtmlContent] = useState('');
+  const [htmlLoading, setHtmlLoading] = useState(false);
+  const [htmlError, setHtmlError] = useState('');
+  const [htmlStatus, setHtmlStatus] = useState('');
   const [previewBranding, setPreviewBranding] = useState<BrandingPreview | null>(null);
   const [brandingDraft, setBrandingDraft] = useState<BrandingPreview>({
     brand: {},
@@ -1172,7 +1176,7 @@ function App() {
     }
   };
 
-  const handleEditDomain = (domain: string) => {
+  const handleEditDomain = async (domain: string) => {
     const config = domainConfigs[domain] || {};
     setDomainInput(domain);
     setTargetApp(config.targetApp || 'aichat');
@@ -1184,6 +1188,31 @@ function App() {
     } else {
       lastBrandingUpdate.current = 'json';
       setBrandingJson('');
+    }
+
+    // Load HTML content from domain-worker
+    setHtmlLoading(true);
+    setHtmlError('');
+    setHtmlStatus('');
+    try {
+      const response = await fetch(
+        `${DOMAIN_API_BASE}/custom-domain?domain=${encodeURIComponent(domain)}`
+      );
+      const data = await response.json();
+      if (response.ok && data?.success && data?.config?.htmlContent) {
+        setHtmlContent(data.config.htmlContent);
+        setHtmlStatus('HTML loaded');
+        setTimeout(() => setHtmlStatus(''), 3000);
+      } else {
+        setHtmlContent('');
+      }
+    } catch (error) {
+      setHtmlError(
+        `Failed to load HTML: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      setHtmlContent('');
+    } finally {
+      setHtmlLoading(false);
     }
   };
 
@@ -1240,7 +1269,8 @@ function App() {
           targetApp,
           logoUrl,
           slogan,
-          branding: brandingPayload
+          branding: brandingPayload,
+          htmlContent: htmlContent.trim() || null
         })
       });
       const data = await response.json();
@@ -1977,6 +2007,76 @@ function App() {
               )}
               {domainError && (
                 <p className="mt-3 text-xs text-rose-300">{domainError}</p>
+              )}
+
+              {/* HTML CONTENT EDITOR SECTION */}
+              {previewBranding && (
+                <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    📄 Published HTML Content
+                  </h3>
+                  <p className="mt-1 text-xs text-white/60">
+                    Edit the HTML content that gets served when visitors access {domainInput || 'your domain'}
+                  </p>
+
+                  {htmlLoading ? (
+                    <div className="mt-4 flex items-center gap-2 text-xs text-white/60">
+                      <div className="h-3 w-3 animate-spin rounded-full border border-white/30 border-t-white"></div>
+                      Loading HTML content...
+                    </div>
+                  ) : (
+                    <>
+                      <textarea
+                        value={htmlContent}
+                        onChange={(event) => setHtmlContent(event.target.value)}
+                        placeholder="Paste your HTML content here, or it will be auto-loaded from your published domain..."
+                        rows={12}
+                        className="mt-4 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 font-mono text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                        style={{ height: '300px', resize: 'vertical' }}
+                      />
+
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (htmlContent) {
+                              window.open(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`, '_blank');
+                            } else {
+                              alert('No HTML content to preview');
+                            }
+                          }}
+                          className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-white/80 hover:border-white/30 hover:bg-white/5"
+                        >
+                          👁️ Preview HTML
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHtmlContent('');
+                            setHtmlStatus('HTML content cleared');
+                            setTimeout(() => setHtmlStatus(''), 2000);
+                          }}
+                          disabled={!htmlContent}
+                          className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-white/60 disabled:opacity-40 hover:border-white/30 hover:bg-white/5"
+                        >
+                          🗑️ Clear
+                        </button>
+
+                        {htmlError && (
+                          <span className="text-xs text-rose-300 ml-auto">{htmlError}</span>
+                        )}
+                        {htmlStatus && (
+                          <span className="text-xs text-emerald-300 ml-auto">{htmlStatus}</span>
+                        )}
+                      </div>
+
+                      <div className="mt-2 text-xs text-white/50">
+                        HTML will be saved when you click "Save changes" or "Add domain" at the top.
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
             </section>
             )}
