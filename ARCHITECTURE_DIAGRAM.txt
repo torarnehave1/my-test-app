@@ -1,0 +1,313 @@
+================================================================================
+                IMPLICIT NODE PATCHING - ARCHITECTURE DIAGRAM
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                            USER INTERFACE LAYER                              │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  GNewViewer (Knowledge Graph Visualization)                                  │
+│  ┌────────────────────────────────────────┐                                 │
+│  │  [Node 1]  [Node 2]  [Node 3]         │                                 │
+│  │                                        │                                 │
+│  │  User highlights:                      │                                 │
+│  │  ┌──────────────────────────────────┐ │                                 │
+│  │  │ <meta property="og:site_name"    │ │  ← Highlighted text             │
+│  │  │ content="Norse Gong" />          │ │                                 │
+│  │  └──────────────────────────────────┘ │                                 │
+│  └────────────────────────────────────────┘                                 │
+│                     ↓                                                         │
+│  GrokChatPanel (AI Chat)                                                    │
+│  ┌────────────────────────────────────────┐                                 │
+│  │  ✅ Use Graph Context                 │                                 │
+│  │  ✅ Raw JSON Mode                     │  ← Settings enable              │
+│  │                                        │                                 │
+│  │  User: "Change Norse Gong to          │                                 │
+│  │         Connect Norse Gong"           │  ← User request                 │
+│  │                                        │                                 │
+│  │  AI: "I'll make that change..."       │                                 │
+│  └────────────────────────────────────────┘                                 │
+│                     ↓                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+                                    ↓
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         GROK CHAT PANEL (FRONTEND)                           │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ sendMessage() - Build system context                               │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│         ↓                                                                     │
+│  Check: useRawJsonMode.value = true?   ✅ YES                              │
+│  Check: selectionFocus != null?         ✅ YES                              │
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ Add IMPLICIT PATCHING CONTEXT to system prompt:                    │   │
+│  │                                                                      │   │
+│  │ "IMPLICIT NODE PATCHING MODE                                       │   │
+│  │                                                                      │   │
+│  │  You have detected that:                                           │   │
+│  │  1. Raw JSON Mode is enabled                                       │   │
+│  │  2. A specific piece of text is highlighted in node: 96e477ae...   │   │
+│  │                                                                      │   │
+│  │  When user asks 'change this to X':                                │   │
+│  │  - Make ONLY that surgical change                                  │   │
+│  │  - Send partial update: {id: 'node-id', field: 'newvalue'}        │   │
+│  │  - Use graph_update_current to save"                               │   │
+│  │                                                                      │   │
+│  │  Example:                                                           │   │
+│  │  graph_update_current({                                            │   │
+│  │    "nodes": [{                                                      │   │
+│  │      "id": "96e477ae-e343...",                                     │   │
+│  │      "info": "<meta ... Connect Norse Gong ... />"                │   │
+│  │    }]                                                               │   │
+│  │  })                                                                 │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                               │
+│  Send to AI provider (OpenAI/Claude/Grok)                                   │
+│         ↓                                                                     │
+│  AI returns with tools:                                                     │
+│  {                                                                           │
+│    "tool_calls": [{                                                         │
+│      "name": "graph_update_current",                                        │
+│      "arguments": {                                                         │
+│        "nodes": [{                                                          │
+│          "id": "96e477ae...",                                              │
+│          "info": "<meta property=\"og:site_name\" ... \"Connect...\" />"   │
+│        }]                                                                   │
+│      }                                                                      │
+│    }]                                                                       │
+│  }                                                                           │
+│         ↓                                                                     │
+│  executeGraphManipulationTool("graph_update_current", args)                │
+│  └────────────────────────────────────────────────────────────────────────┘   │
+│                                                                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+                                    ↓
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                 IMPLICIT PATCHING DETECTION & MERGING LOGIC                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  Received nodes from AI:                                                     │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ [{                                                                   │   │
+│  │   "id": "96e477ae-e343-48f3-8142-5478b74ce342",                     │   │
+│  │   "info": "<meta property=\"og:site_name\" ... />"                  │   │
+│  │ }]                                                                   │   │
+│  │                                                                      │   │
+│  │ Question: Is this a PARTIAL update?                                │   │
+│  │                                                                      │   │
+│  │ Detection logic:                                                    │   │
+│  │ - Has 'id' field? YES ✅                                            │   │
+│  │ - Number of fields besides id:                                     │   │
+│  │   Checking: label? NO                                              │   │
+│  │   Checking: info? YES (count=1)                                    │   │
+│  │   Checking: type? NO                                               │   │
+│  │   Checking: position? NO                                           │   │
+│  │ - Total fields: 1 (less than 3) ✅ PARTIAL UPDATE                 │   │
+│  │                                                                      │   │
+│  │ Result: isPartialUpdate = true                                      │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│         ↓                                                                     │
+│  MERGE STEP:                                                                │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ Existing node in store:                                              │   │
+│  │ {                                                                    │   │
+│  │   id: "96e477ae...",                                               │   │
+│  │   label: "Header Metadata",          ← KEEP                         │   │
+│  │   type: "metadata",                  ← KEEP                         │   │
+│  │   info: "<meta old content... />",   ← REPLACE                      │   │
+│  │   position: {x: 100, y: 200},        ← KEEP                         │   │
+│  │   bibl: [],                          ← KEEP                         │   │
+│  │   visible: true                      ← KEEP                         │   │
+│  │ }                                                                    │   │
+│  │                                                                      │   │
+│  │ Partial update:                                                    │   │
+│  │ {                                                                    │   │
+│  │   id: "96e477ae...",                                               │   │
+│  │   info: "<meta new content... />"    ← REPLACE THIS ONLY           │   │
+│  │ }                                                                    │   │
+│  │                                                                      │   │
+│  │ Merge operation: {...existing, ...partial}                         │   │
+│  │                                                                      │   │
+│  │ Result:                                                             │   │
+│  │ {                                                                    │   │
+│  │   id: "96e477ae...",                                               │   │
+│  │   label: "Header Metadata",          ✅ PRESERVED                  │   │
+│  │   type: "metadata",                  ✅ PRESERVED                  │   │
+│  │   info: "<meta new content... />",   ✅ UPDATED                    │   │
+│  │   position: {x: 100, y: 200},        ✅ PRESERVED                  │   │
+│  │   bibl: [],                          ✅ PRESERVED                  │   │
+│  │   visible: true,                     ✅ PRESERVED                  │   │
+│  │   updatedAt: "2026-02-04T10:30Z",    ✅ ADDED                      │   │
+│  │   updatedBy: "user@example.com"      ✅ ADDED                      │   │
+│  │ }                                                                    │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│         ↓                                                                     │
+│  Console log: "✂️ Implicit node patch detected"                            │
+│  Return status: { patchMode: true, nodesModified: 1 }                      │
+│                                                                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+                                    ↓
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          BACKEND PERSISTENCE                                 │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  Prepare final graph data:                                                  │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ {                                                                    │   │
+│  │   id: "graph_1769887409014",                                        │   │
+│  │   nodes: [                                                          │   │
+│  │     {patched node with all fields},                                 │   │
+│  │     {all other nodes unchanged}                                     │   │
+│  │   ],                                                                │   │
+│  │   edges: [...],                                                    │   │
+│  │   metadata: {                                                       │   │
+│  │     updated: "2026-02-04T10:30Z",                                  │   │
+│  │     updatedBy: "user@example.com"                                  │   │
+│  │   }                                                                 │   │
+│  │ }                                                                    │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│         ↓                                                                     │
+│  POST https://knowledge.vegvisr.org/saveGraphWithHistory                    │
+│  (or future PATCH /patchknowgraphnode)                                      │
+│         ↓                                                                     │
+│  Backend:                                                                   │
+│  ✅ Stores updated graph                                                    │
+│  ✅ Maintains history                                                       │
+│  ✅ Updates timestamps                                                      │
+│  ✅ Returns success                                                         │
+│         ↓                                                                     │
+│  Update front end store                                                     │
+│         ↓                                                                     │
+│  Display success to user                                                    │
+│                                                                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+                                    ↓
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         USER SEES RESULT                                     │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  GNewViewer updates to show:                                                │
+│  ┌──────────────────────────────────────────┐                               │
+│  │  <meta property="og:site_name"           │                               │
+│  │  content="Connect Norse Gong ™" /> ✅    │  ← Updated!                   │
+│  └──────────────────────────────────────────┘                               │
+│                                                                               │
+│  GrokChatPanel shows:                                                       │
+│  "✅ Graph updated successfully"                                             │
+│  "Graph updated successfully: Nodes modified: 1, Patch mode: true"         │
+│                                                                               │
+│  Console shows:                                                             │
+│  "✂️ Implicit node patch detected: merging partial updates..."              │
+│                                                                               │
+│  Result:                                                                    │
+│  ✅ Only meta tag changed                                                   │
+│  ✅ All other fields preserved                                              │
+│  ✅ Timestamps recorded                                                     │
+│  ✅ Change persisted to database                                            │
+│                                                                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                               KEY FEATURES SUMMARY
+================================================================================
+
+AUTOMATIC DETECTION:
+  • No manual mode switching
+  • System detects Raw JSON + highlighted text
+  • Automatically provides context to AI
+  • No special syntax required
+
+SURGICAL EDITS:
+  • Only sends changed fields
+  • Preserves all other node data
+  • Safe from accidental data loss
+  • Timestamps automatically added
+
+EFFICIENT:
+  • Smaller payloads (< 1KB vs 50KB+)
+  • Faster processing
+  • Better user experience
+  • Less bandwidth usage
+
+SAFE:
+  • Automatic merging with existing data
+  • No risk of overwriting fields
+  • Full audit trail (updatedAt, updatedBy)
+  • Backward compatible
+
+INTELLIGENT:
+  • AI understands implicit patching mode
+  • AI receives clear instructions
+  • AI makes surgical changes
+  • AI confirms what's being changed
+
+================================================================================
+                              DECISION FLOW
+================================================================================
+
+User Action                          System Decision
+─────────────────────────────────────────────────────────────────────────────
+Highlight text + ask change          → Raw JSON mode ON?
+                                      → Yes: Implicit patching ON
+
+AI receives message                  → System prompt includes patching context
+                                      → AI knows to send partial updates
+
+AI calls graph_update_current         → Extract arguments
+with nodes array                      → Count fields in each node
+
+Each node analyzed                    → Has id + few fields? (< 3 fields?)
+                                      → YES: Treat as partial update
+                                      → NO: Treat as full update
+
+If Partial:                          → Get existing node from store
+                                      → Merge: {...existing, ...partial}
+                                      → Add timestamps
+                                      → Return with patchMode: true
+
+If Full:                             → Use node as-is
+                                      → Add timestamps
+                                      → Return with patchMode: false
+
+Either way:                          → Send to backend
+                                      → Backend saves
+                                      → User sees update
+
+================================================================================
+                              FILE RELATIONSHIPS
+================================================================================
+
+GrokChatPanel.vue
+├─ Line 6260-6305: Implicit patching context
+├─ Line 6134-6180: Tool documentation
+├─ Line 1920-1970: Smart merging logic
+└─ Calls: executeGraphManipulationTool()
+
+executeGraphManipulationTool()
+├─ Detects: isPartialUpdate flag
+├─ Merges: partial with existing
+├─ Prepares: final graph data
+└─ Sends: to backend
+
+Backend (knowledge.vegvisr.org)
+├─ Current: POST /saveGraphWithHistory
+├─ Future: PATCH /patchknowgraphnode (spec in BACKEND_PATCH_ENDPOINT.md)
+└─ Result: Persists to database
+
+Documentation
+├─ QUICK_START.md: 1-min setup
+├─ IMPLICIT_PATCHING_EXAMPLE.md: Detailed examples
+├─ IMPLEMENTATION_SUMMARY.md: Technical deep-dive
+└─ BACKEND_PATCH_ENDPOINT.md: Backend specification
+
+================================================================================
