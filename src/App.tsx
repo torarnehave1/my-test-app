@@ -97,7 +97,8 @@ function App() {
     }
   });
   const [htmlSelectedPointId, setHtmlSelectedPointId] = useState<string | null>(null);
-  const [htmlSplitRatio] = useState(50);
+  const [htmlSplitRatio, setHtmlSplitRatio] = useState(50);
+  const [htmlIsResizing, setHtmlIsResizing] = useState(false);
   const htmlSplitRef = useRef<HTMLDivElement | null>(null);
   const [htmlElementSelector, setHtmlElementSelector] = useState(false);
   const [selectedElement, setSelectedElement] = useState<{ selector: string; tag: string } | null>(null);
@@ -2572,9 +2573,32 @@ ${value}`
                       </div>
                     </div>
 
+                    {/* RESIZER DIVIDER */}
+                    <div
+                      onMouseDown={() => {
+                        setHtmlIsResizing(true);
+                        const onMove = (moveEvent: MouseEvent) => {
+                          if (!htmlSplitRef.current) return;
+                          const rect = htmlSplitRef.current.getBoundingClientRect();
+                          const newRatio = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+                          setHtmlSplitRatio(Math.min(80, Math.max(20, newRatio)));
+                        };
+                        const onUp = () => {
+                          setHtmlIsResizing(false);
+                          window.removeEventListener('mousemove', onMove);
+                          window.removeEventListener('mouseup', onUp);
+                        };
+                        window.addEventListener('mousemove', onMove);
+                        window.addEventListener('mouseup', onUp);
+                      }}
+                      className={`hidden lg:block w-1 ${
+                        htmlIsResizing ? 'bg-sky-500' : 'bg-white/10 hover:bg-sky-500/40'
+                      } cursor-col-resize transition-colors`}
+                    />
+
                     {/* RIGHT SIDE: EDITOR AND STYLING CONTROLS */}
                     <div
-                      className="lg:pl-6 lg:border-l lg:border-white/10"
+                      className="lg:pl-6"
                       style={{ flexBasis: `${100 - htmlSplitRatio}%` }}
                     >
                       <div className="text-xs uppercase tracking-[0.3em] text-white/60 mb-4">
