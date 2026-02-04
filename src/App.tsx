@@ -2637,6 +2637,22 @@ ${value}`
                         >
                           {domainLoading ? 'Saving...' : '💾 Save HTML'}
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Extract GRAPH_ID from HTML content
+                            const graphIdMatch = htmlContent.match(/const\s+GRAPH_ID\s*=\s*['"](graph_\d+)['"]/);
+                            if (graphIdMatch && graphIdMatch[1]) {
+                              const graphId = graphIdMatch[1];
+                              window.open(`https://www.vegvisr.org/gnew-viewer?graphId=${graphId}`, '_blank');
+                            } else {
+                              alert('Could not find GRAPH_ID in HTML content. Make sure it contains: const GRAPH_ID = "graph_xxxxx";');
+                            }
+                          }}
+                          className="rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/20"
+                        >
+                          📊 Open in GNewViewer
+                        </button>
                       </div>
 
                       {htmlError && <p className="mt-2 text-xs text-rose-300">{htmlError}</p>}
