@@ -343,40 +343,44 @@ export default {
 
       // If HTML content provided, also write to proxy-worker KV if available
       // Preserve existing metadata (graphId, nodeId) from the original publish
+      // Falls back to extracting from HTML content if metadata is missing
       if (htmlContent && env.HTML_PAGES) {
         const key = `html:${domain}`;
         const { metadata: existingMeta } = await env.HTML_PAGES.getWithMetadata(key);
+        let graphId = existingMeta?.graphId || '';
+        let nodeId = existingMeta?.nodeId || '';
+        if (!graphId) {
+          const m = htmlContent.match(/const\s+GRAPH_ID\s*=\s*['"]([^'"]+)['"]/);
+          if (m) graphId = m[1];
+        }
+        if (!nodeId) {
+          const m = htmlContent.match(/const\s+NODE_ID\s*=\s*['"]([^'"]+)['"]/);
+          if (m) nodeId = m[1];
+        }
         await env.HTML_PAGES.put(key, htmlContent, {
-          metadata: existingMeta || {}
+          metadata: { graphId, nodeId, publishedAt: new Date().toISOString() }
         });
-        console.log(`[domain-worker] HTML saved to KV: ${key}`);
-
-        // Sync updated HTML back to the knowledge graph node in D1
-        const graphId = existingMeta?.graphId;
-        const nodeId = existingMeta?.nodeId;
-        if (graphId && nodeId) {
+        console.log(`[domain-worker] HTML saved to KV: ${key} (graph=${graphId}, node=${nodeId})`);
+        // Sync updated HTML to D1 knowledge graph via service binding + /patchNode
+        if (graphId && nodeId && env.KG_WORKER) {
           try {
-            const KG_WORKER = 'https://knowledge-graph-worker.torarnehave.workers.dev';
-            const graphRes = await fetch(`${KG_WORKER}/getknowgraph?id=${encodeURIComponent(graphId)}`);
-            if (graphRes.ok) {
-              const graphJson = await graphRes.json();
-              const graphData = graphJson.data || graphJson;
-              const targetNode = graphData.nodes?.find(n => n.id === nodeId);
-              if (targetNode) {
-                targetNode.info = htmlContent;
-                await fetch(`${KG_WORKER}/saveGraphWithHistory`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    id: graphId,
-                    graphData,
-                    override: true
-                  })
-                });
-                console.log(`[domain-worker] Synced HTML to D1 graph=${graphId} node=${nodeId}`);
-              } else {
-                console.warn(`[domain-worker] Node ${nodeId} not found in graph ${graphId}`);
-              }
+            const patchRes = await env.KG_WORKER.fetch(
+              new Request('https://fake-host/patchNode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  graphId,
+                  nodeId,
+                  fields: { info: htmlContent }
+                })
+              })
+            );
+            if (patchRes.ok) {
+              const result = await patchRes.json();
+              console.log(`[domain-worker] Synced HTML to D1 via /patchNode graph=${graphId} node=${nodeId} version=${result.newVersion}`);
+            } else {
+              const errBody = await patchRes.text();
+              console.error(`[domain-worker] /patchNode failed (${patchRes.status}):`, errBody);
             }
           } catch (syncError) {
             console.error('[domain-worker] D1 sync failed (non-blocking):', syncError.message);

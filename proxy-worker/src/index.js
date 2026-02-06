@@ -60,8 +60,17 @@ export default {
         );
       }
 
-      const graphId = String(payload?.graphId || '');
-      const nodeId = String(payload?.nodeId || '');
+      // Get graphId/nodeId from payload, or extract from HTML content as fallback
+      let graphId = String(payload?.graphId || '');
+      let nodeId = String(payload?.nodeId || '');
+      if (!graphId) {
+        const graphMatch = html.match(/const\s+GRAPH_ID\s*=\s*['"]([^'"]+)['"]/);
+        if (graphMatch) graphId = graphMatch[1];
+      }
+      if (!nodeId) {
+        const nodeMatch = html.match(/const\s+NODE_ID\s*=\s*['"]([^'"]+)['"]/);
+        if (nodeMatch) nodeId = nodeMatch[1];
+      }
       await env.HTML_PAGES.put(key, html, {
         metadata: { graphId, nodeId, publishedAt: new Date().toISOString() }
       });
