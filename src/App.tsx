@@ -2728,6 +2728,24 @@ ${value}`
                               <button
                                 type="button"
                                 onClick={() => {
+                                  const points = htmlStyling.theme?.background?.points || [];
+                                  if (points.length === 0 || !selectedElement) return;
+                                  const gradientCSS = points
+                                    .map(p => `radial-gradient(circle at ${p.x}% ${p.y}%, ${p.color} 0%, transparent 60%)`)
+                                    .join(', ');
+                                  const newHtml = htmlContent.replace(
+                                    /<\/head>/i,
+                                    `<style>${selectedElement.selector}{background:${gradientCSS}!important;}</style></head>`
+                                  );
+                                  setHtmlContent(newHtml);
+                                }}
+                                className="w-full rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20"
+                              >
+                                Apply Gradient to {selectedElement.tag}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
                                   setSelectedElement(null);
                                   setElementStyles({});
                                 }}
@@ -2742,9 +2760,18 @@ ${value}`
                         {/* GRADIENT POINT EDITOR */}
                         <div className="mb-4">
                           <div className="text-xs uppercase tracking-[0.2em] text-white/60 mb-3">
-                            Gradient Points
+                            Gradient Points{selectedElement ? ` (for ${selectedElement.tag})` : ''}
                           </div>
-                          <div className="relative h-32 w-full rounded-xl border border-white/10 bg-slate-950/60 overflow-hidden">
+                          <div
+                            className="relative h-32 w-full rounded-xl border border-white/10 overflow-hidden"
+                            style={{
+                              background: (htmlStyling.theme?.background?.points || []).length > 0
+                                ? (htmlStyling.theme?.background?.points || [])
+                                    .map(p => `radial-gradient(circle at ${p.x}% ${p.y}%, ${p.color} 0%, transparent 60%)`)
+                                    .join(', ')
+                                : '#0f172a'
+                            }}
+                          >
                             {(htmlStyling.theme?.background?.points || []).map((point) => (
                               <button
                                 key={point.id}
@@ -2827,6 +2854,30 @@ ${value}`
                               }
                               className="h-8 w-12 cursor-pointer rounded border border-white/20"
                             />
+                          </div>
+                        )}
+
+                        {/* APPLY GRADIENT BUTTON */}
+                        {!selectedElement && (
+                          <div className="mb-4">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const points = htmlStyling.theme?.background?.points || [];
+                                if (points.length === 0) return;
+                                const gradientCSS = points
+                                  .map(p => `radial-gradient(circle at ${p.x}% ${p.y}%, ${p.color} 0%, transparent 60%)`)
+                                  .join(', ');
+                                const newHtml = htmlContent.replace(
+                                  /<\/head>/i,
+                                  `<style>body{background:${gradientCSS}!important;}</style></head>`
+                                );
+                                setHtmlContent(newHtml);
+                              }}
+                              className="w-full rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20"
+                            >
+                              Apply Gradient to Body
+                            </button>
                           </div>
                         )}
 
