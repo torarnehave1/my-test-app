@@ -2555,16 +2555,14 @@ ${value}`
 
                                   // Get element info
                                   const tag = target.tagName.toLowerCase();
-                                  const className = target.className;
+                                  const className = typeof target.className === 'string' ? target.className : '';
                                   const id = target.id;
 
                                   let selector = tag;
                                   if (id) selector += `#${id}`;
-                                  if (className) selector += `.${className.split(' ').join('.')}`;
+                                  else if (className) selector += `.${className.trim().split(/\s+/).join('.')}`;
 
-                                  const textContent = target.childNodes.length === 1 && target.childNodes[0].nodeType === 3
-                                    ? target.textContent || ''
-                                    : target.textContent || '';
+                                  const textContent = (target.textContent || '').trim();
 
                                   setSelectedElement({ selector, tag, textContent });
 
@@ -2577,22 +2575,25 @@ ${value}`
                                     fontWeight: computedStyle.fontWeight
                                   });
 
-                                  // Scroll textarea to element in HTML source
-                                  if (htmlTextareaRef.current) {
-                                    let searchPattern = `<${tag}`;
-                                    if (id) searchPattern = `<${tag}[^>]*id="${id}"`;
-                                    else if (className) searchPattern = `<${tag}[^>]*class="${className}"`;
-                                    const match = htmlContent.match(new RegExp(searchPattern));
-                                    if (match && match.index !== undefined) {
-                                      const textBefore = htmlContent.substring(0, match.index);
-                                      const lineNumber = textBefore.split('\n').length - 1;
-                                      const lineHeight = 16; // approximate px per line for text-xs mono
-                                      htmlTextareaRef.current.scrollTop = lineNumber * lineHeight;
-                                      // Also set cursor position
-                                      htmlTextareaRef.current.focus();
-                                      htmlTextareaRef.current.setSelectionRange(match.index, match.index + match[0].length);
+                                  // Scroll textarea to element in HTML source (deferred to avoid focus steal)
+                                  setTimeout(() => {
+                                    const ta = htmlTextareaRef.current;
+                                    if (!ta) return;
+                                    const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                    let idx = -1;
+                                    if (id) {
+                                      idx = htmlContent.indexOf(`id="${id}"`);
+                                    } else if (className) {
+                                      idx = htmlContent.indexOf(`class="${className}"`);
                                     }
-                                  }
+                                    if (idx === -1) {
+                                      idx = htmlContent.indexOf(`<${tag}`);
+                                    }
+                                    if (idx >= 0) {
+                                      const lineNumber = htmlContent.substring(0, idx).split('\n').length - 1;
+                                      ta.scrollTop = lineNumber * 16;
+                                    }
+                                  }, 50);
                                 };
 
                                 (el as HTMLElement).addEventListener('click', clickHandler);
@@ -2719,23 +2720,11 @@ ${value}`
                                       const oldText = selectedElement.textContent;
                                       const newText = event.target.value;
                                       setSelectedElement(prev => prev ? { ...prev, textContent: newText } : prev);
-                                      // Replace in HTML content — find the text near the element's tag
                                       if (oldText && oldText !== newText) {
-                                        const { tag, selector } = selectedElement;
-                                        const id = selector.match(/#([^\s.]+)/)?.[1];
-                                        const cls = selector.match(/\.([^\s#]+)/)?.[1]?.replace(/\./g, ' ');
-                                        let searchPattern: string;
-                                        if (id) {
-                                          searchPattern = `(<${tag}[^>]*id="${id}"[^>]*>)([\\s\\S]*?)(<\\/${tag}>)`;
-                                        } else if (cls) {
-                                          searchPattern = `(<${tag}[^>]*class="${cls}"[^>]*>)([\\s\\S]*?)(<\\/${tag}>)`;
-                                        } else {
-                                          searchPattern = `(<${tag}[^>]*>)(${oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(<\\/${tag}>)`;
-                                        }
-                                        const regex = new RegExp(searchPattern);
-                                        const match = htmlContent.match(regex);
-                                        if (match) {
-                                          const updated = htmlContent.replace(regex, `$1${newText}$3`);
+                                        // Find the old text in htmlContent and replace it
+                                        const idx = htmlContent.indexOf(oldText);
+                                        if (idx >= 0) {
+                                          const updated = htmlContent.substring(0, idx) + newText + htmlContent.substring(idx + oldText.length);
                                           setHtmlContent(updated);
                                         }
                                       }
