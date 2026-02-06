@@ -232,12 +232,14 @@ export default {
           });
           const config = await readBrandConfig(env, domain) || {};
 
-          // Also fetch HTML from HTML_PAGES if available
+          // Also fetch HTML + metadata from HTML_PAGES if available
           if (env.HTML_PAGES) {
             const htmlKey = `html:${domain}`;
-            const htmlContent = await env.HTML_PAGES.get(htmlKey);
+            const { value: htmlContent, metadata: htmlMeta } = await env.HTML_PAGES.getWithMetadata(htmlKey);
             if (htmlContent) {
               config.htmlContent = htmlContent;
+              config.htmlGraphId = htmlMeta?.graphId || '';
+              config.htmlNodeId = htmlMeta?.nodeId || '';
             }
           }
 
@@ -257,12 +259,14 @@ export default {
           domains.map(async (domain) => {
             const config = await readBrandConfig(env, domain) || {};
 
-            // Also fetch HTML from HTML_PAGES if available
+            // Also fetch HTML + metadata from HTML_PAGES if available
             if (env.HTML_PAGES) {
               const htmlKey = `html:${domain}`;
-              const htmlContent = await env.HTML_PAGES.get(htmlKey);
+              const { value: htmlContent, metadata: htmlMeta } = await env.HTML_PAGES.getWithMetadata(htmlKey);
               if (htmlContent) {
                 config.htmlContent = htmlContent;
+                config.htmlGraphId = htmlMeta?.graphId || '';
+                config.htmlNodeId = htmlMeta?.nodeId || '';
               }
             }
 
@@ -338,10 +342,46 @@ export default {
       await writeBrandConfig(env, domain, config);
 
       // If HTML content provided, also write to proxy-worker KV if available
+      // Preserve existing metadata (graphId, nodeId) from the original publish
       if (htmlContent && env.HTML_PAGES) {
         const key = `html:${domain}`;
-        await env.HTML_PAGES.put(key, htmlContent);
+        const { metadata: existingMeta } = await env.HTML_PAGES.getWithMetadata(key);
+        await env.HTML_PAGES.put(key, htmlContent, {
+          metadata: existingMeta || {}
+        });
         console.log(`[domain-worker] HTML saved to KV: ${key}`);
+
+        // Sync updated HTML back to the knowledge graph node in D1
+        const graphId = existingMeta?.graphId;
+        const nodeId = existingMeta?.nodeId;
+        if (graphId && nodeId) {
+          try {
+            const KG_WORKER = 'https://knowledge-graph-worker.torarnehave.workers.dev';
+            const graphRes = await fetch(`${KG_WORKER}/getknowgraph?id=${encodeURIComponent(graphId)}`);
+            if (graphRes.ok) {
+              const graphJson = await graphRes.json();
+              const graphData = graphJson.data || graphJson;
+              const targetNode = graphData.nodes?.find(n => n.id === nodeId);
+              if (targetNode) {
+                targetNode.info = htmlContent;
+                await fetch(`${KG_WORKER}/saveGraphWithHistory`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    id: graphId,
+                    graphData,
+                    override: true
+                  })
+                });
+                console.log(`[domain-worker] Synced HTML to D1 graph=${graphId} node=${nodeId}`);
+              } else {
+                console.warn(`[domain-worker] Node ${nodeId} not found in graph ${graphId}`);
+              }
+            }
+          } catch (syncError) {
+            console.error('[domain-worker] D1 sync failed (non-blocking):', syncError.message);
+          }
+        }
       }
 
       step = 'list-domains';

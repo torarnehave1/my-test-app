@@ -85,6 +85,8 @@ function App() {
   const [htmlLoading, setHtmlLoading] = useState(false);
   const [htmlError, setHtmlError] = useState('');
   const [htmlStatus, setHtmlStatus] = useState('');
+  const [htmlGraphId, setHtmlGraphId] = useState('');
+  const [htmlNodeId, setHtmlNodeId] = useState('');
   const [htmlStyling, setHtmlStyling] = useState<BrandingPreview>({
     theme: {
       background: { points: [
@@ -1219,16 +1221,22 @@ function App() {
       const data = await response.json();
       if (response.ok && data?.success && data?.config?.htmlContent) {
         setHtmlContent(data.config.htmlContent);
+        setHtmlGraphId(data.config.htmlGraphId || '');
+        setHtmlNodeId(data.config.htmlNodeId || '');
         setHtmlStatus('HTML loaded');
         setTimeout(() => setHtmlStatus(''), 3000);
       } else {
         setHtmlContent('');
+        setHtmlGraphId('');
+        setHtmlNodeId('');
       }
     } catch (error) {
       setHtmlError(
         `Failed to load HTML: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
       setHtmlContent('');
+      setHtmlGraphId('');
+      setHtmlNodeId('');
     } finally {
       setHtmlLoading(false);
     }
@@ -2657,6 +2665,12 @@ ${value}`
 
                       {htmlError && <p className="mt-2 text-xs text-rose-300">{htmlError}</p>}
                       {htmlStatus && <p className="mt-2 text-xs text-emerald-300">{htmlStatus}</p>}
+                      {(htmlGraphId || htmlNodeId) && (
+                        <div className="mt-2 flex flex-wrap gap-3 text-xs text-white/50">
+                          {htmlGraphId && <span>Graph: <code className="text-sky-300/70">{htmlGraphId}</code></span>}
+                          {htmlNodeId && <span>Node: <code className="text-sky-300/70">{htmlNodeId}</code></span>}
+                        </div>
+                      )}
 
                       {/* STYLING SECTION */}
                       <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/40 p-4">

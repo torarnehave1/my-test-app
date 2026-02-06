@@ -60,7 +60,11 @@ export default {
         );
       }
 
-      await env.HTML_PAGES.put(key, html);
+      const graphId = String(payload?.graphId || '');
+      const nodeId = String(payload?.nodeId || '');
+      await env.HTML_PAGES.put(key, html, {
+        metadata: { graphId, nodeId, publishedAt: new Date().toISOString() }
+      });
       return jsonResponse({ ok: true, hostname });
     }
 
@@ -80,8 +84,8 @@ export default {
         return jsonResponse({ ok: false, error: 'hostname is required' }, 400);
       }
 
-      const existing = await env.HTML_PAGES.get(`html:${hostname}`);
-      return jsonResponse({ ok: true, hostname, exists: Boolean(existing) });
+      const { value: existing, metadata } = await env.HTML_PAGES.getWithMetadata(`html:${hostname}`);
+      return jsonResponse({ ok: true, hostname, exists: Boolean(existing), metadata: metadata || null });
     }
 
     const maybeServeHtmlPage = async () => {
