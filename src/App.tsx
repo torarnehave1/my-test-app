@@ -90,8 +90,11 @@ function App() {
   const [htmlStyling, setHtmlStyling] = useState<BrandingPreview>({
     theme: {
       background: { points: [
-        { id: '1', x: 20, y: 20, color: '#3b82f6' },
-        { id: '2', x: 80, y: 80, color: '#8b5cf6' }
+        { id: 'tl', x: 10, y: 10, color: '#1d4ed8' },
+        { id: 'tr', x: 90, y: 10, color: '#0f172a' },
+        { id: 'bl', x: 10, y: 90, color: '#e0f2fe' },
+        { id: 'br', x: 90, y: 90, color: '#2563eb' },
+        { id: 'c', x: 50, y: 50, color: '#60a5fa' }
       ]},
       text: { primary: '#e5e7eb', muted: 'rgba(229,231,235,0.7)', headlineGradient: ['#3b82f6', '#8b5cf6'] },
       card: { bg: 'rgba(255,255,255,0.12)', border: 'rgba(255,255,255,0.2)' },
@@ -103,7 +106,8 @@ function App() {
   const [htmlIsResizing, setHtmlIsResizing] = useState(false);
   const htmlSplitRef = useRef<HTMLDivElement | null>(null);
   const [htmlElementSelector, setHtmlElementSelector] = useState(false);
-  const [selectedElement, setSelectedElement] = useState<{ selector: string; tag: string } | null>(null);
+  const [selectedElement, setSelectedElement] = useState<{ selector: string; tag: string; textContent: string } | null>(null);
+  const htmlTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [elementStyles, setElementStyles] = useState<Record<string, string>>({});
   const [previewBranding, setPreviewBranding] = useState<BrandingPreview | null>(null);
   const [brandingDraft, setBrandingDraft] = useState<BrandingPreview>({
@@ -2558,7 +2562,11 @@ ${value}`
                                   if (id) selector += `#${id}`;
                                   if (className) selector += `.${className.split(' ').join('.')}`;
 
-                                  setSelectedElement({ selector, tag });
+                                  const textContent = target.childNodes.length === 1 && target.childNodes[0].nodeType === 3
+                                    ? target.textContent || ''
+                                    : target.textContent || '';
+
+                                  setSelectedElement({ selector, tag, textContent });
 
                                   // Get current styles
                                   const computedStyle = window.getComputedStyle(target);
@@ -2568,6 +2576,23 @@ ${value}`
                                     fontSize: computedStyle.fontSize,
                                     fontWeight: computedStyle.fontWeight
                                   });
+
+                                  // Scroll textarea to element in HTML source
+                                  if (htmlTextareaRef.current) {
+                                    let searchPattern = `<${tag}`;
+                                    if (id) searchPattern = `<${tag}[^>]*id="${id}"`;
+                                    else if (className) searchPattern = `<${tag}[^>]*class="${className}"`;
+                                    const match = htmlContent.match(new RegExp(searchPattern));
+                                    if (match && match.index !== undefined) {
+                                      const textBefore = htmlContent.substring(0, match.index);
+                                      const lineNumber = textBefore.split('\n').length - 1;
+                                      const lineHeight = 16; // approximate px per line for text-xs mono
+                                      htmlTextareaRef.current.scrollTop = lineNumber * lineHeight;
+                                      // Also set cursor position
+                                      htmlTextareaRef.current.focus();
+                                      htmlTextareaRef.current.setSelectionRange(match.index, match.index + match[0].length);
+                                    }
+                                  }
                                 };
 
                                 (el as HTMLElement).addEventListener('click', clickHandler);
@@ -2615,6 +2640,7 @@ ${value}`
 
                       {/* HTML TEXTAREA */}
                       <textarea
+                        ref={htmlTextareaRef}
                         value={htmlContent}
                         onChange={(event) => setHtmlContent(event.target.value)}
                         placeholder="Paste your HTML content here..."
@@ -2683,6 +2709,42 @@ ${value}`
                               ✏️ Style Selected Element: <span className="font-mono">{selectedElement.tag}</span>
                             </div>
                             <div className="space-y-3">
+                              {selectedElement.textContent && (
+                                <div>
+                                  <label className="text-xs font-medium text-white/60 mb-1 block">Text Content</label>
+                                  <textarea
+                                    title="Edit selected element text"
+                                    value={selectedElement.textContent}
+                                    onChange={(event) => {
+                                      const oldText = selectedElement.textContent;
+                                      const newText = event.target.value;
+                                      setSelectedElement(prev => prev ? { ...prev, textContent: newText } : prev);
+                                      // Replace in HTML content — find the text near the element's tag
+                                      if (oldText && oldText !== newText) {
+                                        const { tag, selector } = selectedElement;
+                                        const id = selector.match(/#([^\s.]+)/)?.[1];
+                                        const cls = selector.match(/\.([^\s#]+)/)?.[1]?.replace(/\./g, ' ');
+                                        let searchPattern: string;
+                                        if (id) {
+                                          searchPattern = `(<${tag}[^>]*id="${id}"[^>]*>)([\\s\\S]*?)(<\\/${tag}>)`;
+                                        } else if (cls) {
+                                          searchPattern = `(<${tag}[^>]*class="${cls}"[^>]*>)([\\s\\S]*?)(<\\/${tag}>)`;
+                                        } else {
+                                          searchPattern = `(<${tag}[^>]*>)(${oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(<\\/${tag}>)`;
+                                        }
+                                        const regex = new RegExp(searchPattern);
+                                        const match = htmlContent.match(regex);
+                                        if (match) {
+                                          const updated = htmlContent.replace(regex, `$1${newText}$3`);
+                                          setHtmlContent(updated);
+                                        }
+                                      }
+                                    }}
+                                    className="w-full rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-sky-500/60"
+                                    style={{ height: '60px', resize: 'vertical' }}
+                                  />
+                                </div>
+                              )}
                               <div className="flex items-center gap-3">
                                 <label className="text-xs font-medium text-white/60 flex-1">Background Color</label>
                                 <input
@@ -2763,13 +2825,11 @@ ${value}`
                             Gradient Points{selectedElement ? ` (for ${selectedElement.tag})` : ''}
                           </div>
                           <div
-                            className="relative h-32 w-full rounded-xl border border-white/10 overflow-hidden"
+                            className="relative mb-3 h-72 w-full rounded-2xl border border-white/10 bg-white/5"
                             style={{
-                              background: (htmlStyling.theme?.background?.points || []).length > 0
-                                ? (htmlStyling.theme?.background?.points || [])
-                                    .map(p => `radial-gradient(circle at ${p.x}% ${p.y}%, ${p.color} 0%, transparent 60%)`)
-                                    .join(', ')
-                                : '#0f172a'
+                              background: (htmlStyling.theme?.background?.points || [])
+                                .map(p => `radial-gradient(circle at ${p.x}% ${p.y}%, ${p.color} 0%, transparent 60%)`)
+                                .join(', ') || '#0f172a'
                             }}
                           >
                             {(htmlStyling.theme?.background?.points || []).map((point) => (
@@ -2818,44 +2878,76 @@ ${value}`
                                   top: `${point.y}%`,
                                   backgroundColor: point.color
                                 }}
+                                aria-label={`Gradient point ${point.id}`}
                               />
                             ))}
                           </div>
-                        </div>
-
-                        {/* COLOR PICKER FOR SELECTED POINT */}
-                        {htmlSelectedPointId && (
-                          <div className="mb-4 flex items-center gap-3 rounded-lg border border-white/10 bg-slate-950/80 px-3 py-3">
-                            <div className="text-[10px] uppercase tracking-[0.2em] text-white/50 flex-1">
-                              Point Color
-                            </div>
-                            <input
-                              type="color"
-                              title="Select gradient point color"
-                              value={
-                                (htmlStyling.theme?.background?.points || []).find(
-                                  (point) => point.id === htmlSelectedPointId
-                                )?.color || '#3b82f6'
-                              }
-                              onChange={(event) =>
-                                setHtmlStyling(prev => ({
-                                  ...prev,
-                                  theme: {
-                                    ...prev.theme,
-                                    background: {
-                                      points: (prev.theme?.background?.points || []).map(p =>
-                                        p.id === htmlSelectedPointId
-                                          ? { ...p, color: event.target.value }
-                                          : p
-                                      )
+                          {htmlSelectedPointId && (
+                            <div className="mb-4 flex items-center gap-3 rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3">
+                              <div className="text-[10px] uppercase tracking-[0.3em] text-white/50">
+                                Gradient point
+                              </div>
+                              <input
+                                type="color"
+                                title="Gradient point color picker"
+                                value={
+                                  (htmlStyling.theme?.background?.points || []).find(
+                                    (point) => point.id === htmlSelectedPointId
+                                  )?.color || '#3b82f6'
+                                }
+                                onChange={(event) =>
+                                  setHtmlStyling(prev => ({
+                                    ...prev,
+                                    theme: {
+                                      ...prev.theme,
+                                      background: {
+                                        points: (prev.theme?.background?.points || []).map(p =>
+                                          p.id === htmlSelectedPointId
+                                            ? { ...p, color: event.target.value }
+                                            : p
+                                        )
+                                      }
                                     }
-                                  }
-                                }))
-                              }
-                              className="h-8 w-12 cursor-pointer rounded border border-white/20"
-                            />
-                          </div>
-                        )}
+                                  }))
+                                }
+                                className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+                              />
+                              <input
+                                type="text"
+                                title="Gradient point color value"
+                                placeholder="#3b82f6"
+                                value={
+                                  (htmlStyling.theme?.background?.points || []).find(
+                                    (point) => point.id === htmlSelectedPointId
+                                  )?.color || ''
+                                }
+                                onChange={(event) =>
+                                  setHtmlStyling(prev => ({
+                                    ...prev,
+                                    theme: {
+                                      ...prev.theme,
+                                      background: {
+                                        points: (prev.theme?.background?.points || []).map(p =>
+                                          p.id === htmlSelectedPointId
+                                            ? { ...p, color: event.target.value }
+                                            : p
+                                        )
+                                      }
+                                    }
+                                  }))
+                                }
+                                className="w-28 rounded-md border border-white/10 bg-slate-900/80 px-3 py-2 text-xs text-white/80"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setHtmlSelectedPointId(null)}
+                                className="ml-auto text-xs text-white/50 hover:text-white/80"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          )}
+                        </div>
 
                         {/* APPLY GRADIENT BUTTON */}
                         {!selectedElement && (
