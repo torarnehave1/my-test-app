@@ -2579,7 +2579,6 @@ ${value}`
                                   setTimeout(() => {
                                     const ta = htmlTextareaRef.current;
                                     if (!ta) return;
-                                    const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                                     let idx = -1;
                                     if (id) {
                                       idx = htmlContent.indexOf(`id="${id}"`);
