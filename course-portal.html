@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vegvisr Course Portal — Episodes</title>
+  <meta name="description" content="Course portal for Vegvisr Momentum episodes." />
+
+  <!-- Marked (Markdown renderer) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    :root{
+      --bg0:#070a10;
+      --bg1:#0b1220;
+      --card:rgba(255,255,255,.06);
+      --card2:rgba(255,255,255,.08);
+      --line:rgba(255,255,255,.12);
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --accent:#7c3aed;
+      --accent2:#22c55e;
+      --warn:#fbbf24;
+      --radius:18px;
+      --shadow: 0 24px 70px rgba(0,0,0,.45);
+
+      /* <= max 10px between title/video/description inside hero -->
+      --heroGap: 8px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:var(--text);
+      background:
+        radial-gradient(900px 540px at 16% -10%, rgba(124,58,237,.35), transparent 60%),
+        radial-gradient(780px 520px at 100% 0%, rgba(34,197,94,.18), transparent 55%),
+        radial-gradient(820px 540px at 70% 110%, rgba(59,130,246,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+
+    a{color:#93c5fd}
+
+    .topbar{
+      position:sticky; top:0; z-index:30;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(7,10,16,.78), rgba(7,10,16,.50));
+      border-bottom:1px solid var(--line);
+    }
+    .topbar-inner{
+      max-width:1200px; margin:0 auto; padding:16px 18px;
+      display:flex; align-items:center; justify-content:space-between; gap:14px;
+    }
+
+    .brand{display:flex; align-items:center; gap:12px; min-width:0}
+    .logo{
+      width:42px; height:42px; border-radius:14px;
+      background: linear-gradient(135deg, rgba(124,58,237,1), rgba(59,130,246,1));
+      box-shadow: 0 14px 40px rgba(124,58,237,.32);
+      flex:none;
+    }
+    .brand-title{font-weight:800; letter-spacing:-.02em; line-height:1.1}
+    .brand-sub{font-size:12px; color:var(--muted); margin-top:2px}
+
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 12px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background: rgba(255,255,255,.04);
+      color:var(--muted);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .dot{width:8px;height:8px;border-radius:999px;background:var(--accent); box-shadow: 0 0 0 4px rgba(124,58,237,.18)}
+
+    .layout{
+      max-width:1200px; margin:0 auto; padding:18px;
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:18px;
+    }
+    @media (max-width: 980px){
+      .layout{grid-template-columns:1fr;}
+    }
+
+    .panel{
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .panel-header{
+      padding:14px 14px 12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+    }
+    .panel-header h2{
+      margin:0;
+      font-size:12px;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      color:rgba(229,231,235,.88);
+    }
+
+    .search{
+      display:flex; gap:10px; margin-top:12px;
+    }
+    .search input{
+      width:100%;
+      padding:12px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color:var(--text);
+      outline:none;
+    }
+    .search input::placeholder{color:rgba(156,163,175,.75)}
+
+    .list{
+      max-height: 70vh;
+      overflow:auto;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .item{
+      width:100%;
+      display:flex;
+      gap:12px;
+      padding:12px;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      cursor:pointer;
+      text-align:left;
+      color:inherit;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+    }
+    .item:hover{background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.18)}
+    .item:active{transform: translateY(1px)}
+    .item.active{border-color: rgba(124,58,237,.65); background: rgba(124,58,237,.12)}
+
+    .bullet{
+      width:10px; height:10px; border-radius:999px;
+      background: rgba(156,163,175,.65);
+      flex:none;
+      margin-top: 6px;
+    }
+    .item.active .bullet{background: var(--accent)}
+
+    .item-title{font-weight:700; font-size:14px; line-height:1.25;}
+    .item-meta{font-size:12px; color:var(--muted); margin-top:3px}
+
+    .content-wrap{padding: 12px;}
+    @media (min-width: 981px){
+      .content-wrap{padding: 14px;}
+    }
+
+    /* --- HERO CARD (title + media + description all inside same card) --- */
+    .hero{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      border-radius: 16px;
+      overflow:hidden;
+    }
+    .hero-head{
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
+    .hero-kicker{
+      font-size: 11px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color: rgba(156,163,175,.9);
+      margin:0 0 6px;
+    }
+    .hero h1{
+      margin:0;
+      font-size: 28px;
+      letter-spacing:-.03em;
+      line-height:1.15;
+    }
+    .hero-body{
+      padding: var(--heroGap);
+      display:flex;
+      flex-direction:column;
+      gap: var(--heroGap);
+    }
+
+    /* CONTENT TYPOGRAPHY */
+    .lesson-content{
+      color: rgba(229,231,235,.92);
+      font-size: 14.5px;
+      line-height:1.75;
+    }
+
+    /* Make markdown/HTML render consistently and avoid huge margins */
+    .lesson-content :is(h1,h2,h3){scroll-margin-top:96px}
+    .lesson-content p{margin: .55rem 0}
+    .lesson-content h2{margin: 1.0rem 0 .45rem; font-size:18px}
+    .lesson-content h3{margin: .8rem 0 .35rem; font-size:16px}
+    .lesson-content ul,.lesson-content ol{margin:.55rem 0; padding-left:1.1rem}
+    .lesson-content li{margin:.25rem 0}
+    .lesson-content pre{background: rgba(0,0,0,.28); border:1px solid rgba(255,255,255,.12); padding:14px; border-radius:16px; overflow:auto}
+    .lesson-content code{background: rgba(255,255,255,.06); padding:.1rem .35rem; border-radius:10px}
+    .lesson-content blockquote{margin: 1rem 0; padding: 0 0 0 14px; border-left: 3px solid rgba(255,255,255,.22); color: rgba(229,231,235,.86)}
+    .lesson-content img{max-width:100%; border-radius:16px; border:1px solid rgba(255,255,255,.12)}
+
+    /* If the fulltext starts with the common inline ratio div, don't add margins */
+    .hero-body > div:first-child{ margin-top: 0 !important; }
+
+    /* --- Video wrapper (no extra margins!) --- */
+    .embed-wrap{
+      position:relative;
+      width:100%;
+      padding-top:56.25%;
+      border-radius: 18px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.35);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      margin: 0;
+    }
+    .embed-wrap iframe, .embed-wrap video{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      border:0;
+      display:block;
+    }
+
+    /* Poster overlay */
+    .video-wrap{
+      position:relative;
+      width:100%;
+      padding-top:56.25%;
+      border-radius: 18px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.35);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      margin:0;
+    }
+    .video-overlay{position:absolute; inset:0; border:0; padding:0; margin:0; cursor:pointer; background:none}
+    .video-overlay img{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(1.05) contrast(1.02)}
+    .video-overlay::after{
+      content:"";
+      position:absolute; inset:0;
+      background: radial-gradient(500px 280px at 50% 65%, rgba(0,0,0,.25), rgba(0,0,0,.55));
+    }
+    .play{
+      position:absolute; inset:0;
+      display:grid; place-items:center;
+      z-index:2;
+    }
+    .play .btn{
+      width:74px; height:74px; border-radius:999px;
+      background: rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.18);
+      display:grid; place-items:center;
+      box-shadow: 0 18px 55px rgba(0,0,0,.45);
+    }
+    .play .tri{
+      width:0;height:0; margin-left:4px;
+      border-top:12px solid transparent;
+      border-bottom:12px solid transparent;
+      border-left:18px solid #fff;
+    }
+
+    .empty{
+      padding: 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .error{
+      border:1px solid rgba(239,68,68,.35);
+      background: rgba(239,68,68,.10);
+      padding:14px;
+      border-radius: 16px;
+      color: rgba(254,226,226,.95);
+    }
+
+    /* Remaining content after hero */
+    .lesson-body{ margin-top: 12px; }
+    .lesson-body > :first-child{ margin-top: 0 !important; }
+
+    /* Normalize common first HTML block in your fulltext: the <div style="padding-top:56.25%"> wrapper */
+    .lesson-body > div:first-child{ margin-top: 0 !important; }
+
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div style="min-width:0">
+          <div class="brand-title">Course Portal</div>
+          <div class="brand-sub">Vegvisr Momentum — Episodes</div>
+        </div>
+      </div>
+      <div class="pill" title="Graph source">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="statusPill">Loading…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel" aria-label="Episode list">
+      <div class="panel-header">
+        <h2>Episodes</h2>
+        <div class="search">
+          <input id="searchBox" type="text" placeholder="Search episodes…" />
+        </div>
+        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap">
+          <div class="pill"><span class="dot" aria-hidden="true" style="background:var(--accent2); box-shadow:0 0 0 4px rgba(34,197,94,.14)"></span><span id="episodeCount">0 items</span></div>
+          <button id="retryBtn" class="pill" style="cursor:pointer; display:none">Reload</button>
+        </div>
+      </div>
+      <div id="menu" class="list"></div>
+      <div id="emptyState" class="empty" style="display:none">No episode nodes found. Ensure nodes contain "Episode" in their label.</div>
+    </aside>
+
+    <section class="panel" aria-label="Episode content">
+      <div class="content-wrap">
+        <div id="content" class="lesson-content">Loading content…</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const GRAPH_ID = 'graph_1769452708945';
+
+    let allNodes = [];
+    let contentNodes = [];
+    let currentId = null;
+
+    marked.setOptions({ gfm: true, breaks: false });
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#039;' };
+      return String(text ?? '').replace(/[&<>\"']/g, m => map[m]);
+    }
+
+    function isLikelyHtmlEmbed(str) {
+      if (!str) return false;
+      const s = String(str).toLowerCase();
+      return s.includes('<iframe') || s.includes('<video') || s.includes('<script') || s.includes('</iframe') || s.includes('</video');
+    }
+
+    function stripFullHtmlDocument(src) {
+      let s = String(src || '');
+      const bodyMatch = s.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      if (bodyMatch) s = bodyMatch[1];
+      return s;
+    }
+
+    function renderContent(info) {
+      if (!info) return '<p>No content.</p>';
+      let src = stripFullHtmlDocument(info);
+      return marked.parse(String(src));
+    }
+
+    function applyVideoOverlay(container, node) {
+      if (!node?.path) return;
+
+      const iframe = container.querySelector('iframe');
+      if (!iframe) return;
+
+      const src = iframe.getAttribute('src') || '';
+      if (!src) return;
+
+      const poster = node.path;
+      const host = iframe.closest('.embed-wrap') || iframe;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'video-wrap';
+      wrapper.innerHTML = `
+        <button type="button" class="video-overlay" aria-label="Play video">
+          <img src="${escapeHtml(poster)}" alt="Video poster" loading="lazy" />
+          <div class="play"><div class="btn"><div class="tri"></div></div></div>
+        </button>
+      `;
+
+      host.replaceWith(wrapper);
+
+      wrapper.querySelector('button').addEventListener('click', () => {
+        const autoplaySrc = src.includes('?') ? `${src}&autoplay=1` : `${src}?autoplay=1`;
+
+        const embedDiv = document.createElement('div');
+        embedDiv.className = 'embed-wrap';
+        embedDiv.innerHTML = `
+          <iframe
+            src="${escapeHtml(autoplaySrc)}"
+            loading="lazy"
+            style="position:absolute;inset:0;width:100%;height:100%;border:0;display:block;"
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+            allowfullscreen
+          ></iframe>
+        `;
+        wrapper.replaceWith(embedDiv);
+      });
+    }
+
+    function setStatus(text) {
+      document.getElementById('statusPill').textContent = text || '';
+    }
+
+    function toggleRetry(show) {
+      const btn = document.getElementById('retryBtn');
+      btn.style.display = show ? 'inline-flex' : 'none';
+    }
+
+    function buildMenu(list) {
+      const menu = document.getElementById('menu');
+      menu.innerHTML = '';
+
+      list.forEach(n => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'item';
+        btn.dataset.id = n.id;
+        btn.addEventListener('click', () => show(n.id));
+
+        const bullet = document.createElement('div');
+        bullet.className = 'bullet';
+
+        const text = document.createElement('div');
+        text.style.minWidth = '0';
+
+        const title = document.createElement('div');
+        title.className = 'item-title';
+        title.textContent = n.label || '(untitled)';
+
+        const meta = document.createElement('div');
+        meta.className = 'item-meta';
+        meta.textContent = (n.order != null) ? `Order: ${n.order}` : '';
+
+        text.appendChild(title);
+        text.appendChild(meta);
+
+        btn.appendChild(bullet);
+        btn.appendChild(text);
+
+        menu.appendChild(btn);
+      });
+    }
+
+    function setActiveMenu(id) {
+      document.querySelectorAll('#menu .item').forEach(el => {
+        el.classList.toggle('active', el.dataset.id === id);
+      });
+    }
+
+    function show(id) {
+      currentId = id;
+      const node = contentNodes.find(n => n.id === id);
+      if (!node) return;
+
+      setActiveMenu(id);
+
+      const content = document.getElementById('content');
+      const title = escapeHtml(node.label || 'Content');
+
+      const fullHtml = renderContent(node.info);
+      const tmp = document.createElement('div');
+      tmp.innerHTML = fullHtml;
+
+      // --- Normalize iframe wrappers ---
+      // Input often has <div style="padding-top:56.25%"><iframe></div>.
+      // Convert any single-iframe wrapper div into our standard .embed-wrap
+      // so there is only ONE aspect-ratio container, not two.
+      tmp.querySelectorAll('iframe').forEach(iframe => {
+        const parent = iframe.parentElement;
+        if (parent && parent !== tmp
+            && parent.tagName === 'DIV'
+            && parent.children.length === 1
+            && !parent.classList.contains('embed-wrap')) {
+          parent.className = 'embed-wrap';
+          parent.removeAttribute('style');
+        }
+      });
+
+      // Extract FIRST media wrapper
+      let mediaEl = tmp.querySelector('.embed-wrap');
+      if (!mediaEl) mediaEl = tmp.querySelector('iframe');
+
+      // Remove first H1 from content so we don't duplicate the title
+      const firstH1 = tmp.querySelector('h1');
+      if (firstH1) firstH1.remove();
+
+      let mediaHtml = '';
+      if (mediaEl) {
+        mediaHtml = mediaEl.outerHTML;
+        mediaEl.remove();
+      }
+
+      const remainingHtml = tmp.innerHTML;
+
+      content.className = 'lesson-content';
+      content.innerHTML = `
+        <div class="hero">
+          <div class="hero-head">
+            <p class="hero-kicker">Episode</p>
+            <h1>${title}</h1>
+          </div>
+          <div class="hero-body">
+            ${mediaHtml ? `<div>${mediaHtml}</div>` : ''}
+            ${remainingHtml ? `<div class="hero-description">${remainingHtml}</div>` : ''}
+          </div>
+        </div>
+      `;
+
+      applyVideoOverlay(content, node);
+    }
+
+    function applySearch(query) {
+      const q = String(query || '').trim().toLowerCase();
+      const filtered = !q ? contentNodes : contentNodes.filter(n => String(n.label || '').toLowerCase().includes(q));
+      buildMenu(filtered);
+
+      if (filtered.length) {
+        if (!filtered.some(n => n.id === currentId)) show(filtered[0].id);
+        else setActiveMenu(currentId);
+      } else {
+        const content = document.getElementById('content');
+        content.innerHTML = '<div class="error"><strong>No matches.</strong><div style="margin-top:6px; color: rgba(254,226,226,.85)">Try a different search.</div></div>';
+      }
+    }
+
+    async function init() {
+      setStatus('Loading…');
+      toggleRetry(false);
+
+      const content = document.getElementById('content');
+      content.className = 'lesson-content';
+      content.textContent = 'Loading content…';
+
+      try {
+        const res = await fetch('https://knowledge.vegvisr.org/getknowgraph?id=' + encodeURIComponent(GRAPH_ID));
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        allNodes = data.nodes || [];
+
+        contentNodes = allNodes.filter(n => {
+          const hasEpisode = String(n.label || '').toLowerCase().includes('episode');
+          const hasInfo = n.info && String(n.info).trim().length > 0;
+          return hasEpisode && hasInfo;
+        });
+
+        contentNodes.sort((a, b) => {
+          const ao = (a.order ?? null);
+          const bo = (b.order ?? null);
+          if (ao != null && bo != null) return ao - bo;
+          if (ao != null && bo == null) return -1;
+          if (ao == null && bo != null) return 1;
+          return String(a.label || '').localeCompare(String(b.label || ''));
+        });
+
+        document.getElementById('episodeCount').textContent = `${contentNodes.length} item${contentNodes.length === 1 ? '' : 's'}`;
+
+        if (contentNodes.length === 0) {
+          document.getElementById('emptyState').style.display = 'block';
+          document.getElementById('menu').innerHTML = '';
+          setStatus('No episodes');
+          return;
+        }
+
+        document.getElementById('emptyState').style.display = 'none';
+        buildMenu(contentNodes);
+        setStatus('Ready');
+        show(contentNodes[0].id);
+      } catch (err) {
+        setStatus('Error');
+        toggleRetry(true);
+        content.innerHTML = `<div class="error"><strong>Could not load graph</strong><div style="margin-top:6px">${escapeHtml(err.message)}</div></div>`;
+        console.error(err);
+      }
+    }
+
+    document.getElementById('searchBox').addEventListener('input', e => applySearch(e.target.value));
+    document.getElementById('retryBtn').addEventListener('click', init);
+
+    init();
+  </script>
+</body>
+</html>
